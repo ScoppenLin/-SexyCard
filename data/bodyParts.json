@@ -1,24 +1,244 @@
 [
-  { "label": { "zh": "手心", "en": "the palm" }, "score": 1 },
-  { "label": { "zh": "肩膀", "en": "the shoulder" }, "score": 2 },
-  { "label": { "zh": "後頸", "en": "the back of the neck" }, "score": 4 },
-  { "label": { "zh": "手臂", "en": "the arm" }, "score": 2 },
-  { "label": { "zh": "背部", "en": "the back" }, "score": 3 },
-  { "label": { "zh": "耳邊", "en": "beside the ear" }, "score": 4 },
-  { "label": { "zh": "腰側", "en": "the side of the waist" }, "score": 5 },
-  { "label": { "zh": "鎖骨附近", "en": "near the collarbone" }, "score": 5 },
-  { "label": { "zh": "嘴唇", "en": "the lips" }, "score": 7 },
-  { "label": { "zh": "鼻尖", "en": "the tip of the nose" }, "score": 3 },
-  { "label": { "zh": "臉頰", "en": "the cheek" }, "score": 3 },
-  { "label": { "zh": "手背", "en": "the back of the hand" }, "score": 1 },
-  { "label": { "zh": "乳頭", "en": "the nipple" }, "score": 9 },
-  { "label": { "zh": "肚臍", "en": "the navel" }, "score": 8 },
-  { "label": { "zh": "陰蒂/龜頭", "en": "the clitoris or glans" }, "score": 10 },
-  { "label": { "zh": "陰唇/睪丸", "en": "the labia or testicles" }, "score": 10 },
-  { "label": { "zh": "屁股蛋", "en": "the butt cheek" }, "score": 7 },
-  { "label": { "zh": "膝蓋後側", "en": "behind the knee" }, "score": 5 },
-  { "label": { "zh": "大腿內側", "en": "the inner thigh" }, "score": 7 },
-  { "label": { "zh": "脖子", "en": "the neck" }, "score": 5 },
-  { "label": { "zh": "耳朵", "en": "the ear" }, "score": 4 },
-  { "label": { "zh": "胳肢窩", "en": "the armpit" }, "score": 6 }
+  {
+    "label": {
+      "zh": "手心",
+      "en": "the palm",
+      "id": "telapak tangan",
+      "vi": "lòng bàn tay",
+      "ja": "手のひら",
+      "ko": "손바닥"
+    },
+    "score": 1
+  },
+  {
+    "label": {
+      "zh": "肩膀",
+      "en": "the shoulder",
+      "id": "bahu",
+      "vi": "vai",
+      "ja": "肩",
+      "ko": "어깨"
+    },
+    "score": 2
+  },
+  {
+    "label": {
+      "zh": "後頸",
+      "en": "the back of the neck",
+      "id": "bagian belakang leher",
+      "vi": "sau gáy",
+      "ja": "首の後ろ",
+      "ko": "목덜미"
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "手臂",
+      "en": "the arm",
+      "id": "lengan",
+      "vi": "cánh tay",
+      "ja": "腕",
+      "ko": "팔"
+    },
+    "score": 2
+  },
+  {
+    "label": {
+      "zh": "背部",
+      "en": "the back",
+      "id": "punggung",
+      "vi": "lưng",
+      "ja": "背中",
+      "ko": "등"
+    },
+    "score": 3
+  },
+  {
+    "label": {
+      "zh": "耳邊",
+      "en": "beside the ear",
+      "id": "dekat telinga",
+      "vi": "bên tai",
+      "ja": "耳元",
+      "ko": "귀 옆"
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "腰側",
+      "en": "the side of the waist",
+      "id": "sisi pinggang",
+      "vi": "eo bên hông",
+      "ja": "腰の横",
+      "ko": "허리 옆"
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "鎖骨附近",
+      "en": "near the collarbone",
+      "id": "dekat tulang selangka",
+      "vi": "gần xương quai xanh",
+      "ja": "鎖骨の近く",
+      "ko": "쇄골 근처"
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "嘴唇",
+      "en": "the lips",
+      "id": "bibir",
+      "vi": "môi",
+      "ja": "唇",
+      "ko": "입술"
+    },
+    "score": 7
+  },
+  {
+    "label": {
+      "zh": "鼻尖",
+      "en": "the tip of the nose",
+      "id": "ujung hidung",
+      "vi": "chóp mũi",
+      "ja": "鼻先",
+      "ko": "코끝"
+    },
+    "score": 3
+  },
+  {
+    "label": {
+      "zh": "臉頰",
+      "en": "the cheek",
+      "id": "pipi",
+      "vi": "má",
+      "ja": "頬",
+      "ko": "볼"
+    },
+    "score": 3
+  },
+  {
+    "label": {
+      "zh": "手背",
+      "en": "the back of the hand",
+      "id": "punggung tangan",
+      "vi": "mu bàn tay",
+      "ja": "手の甲",
+      "ko": "손등"
+    },
+    "score": 1
+  },
+  {
+    "label": {
+      "zh": "乳頭",
+      "en": "the nipple",
+      "id": "puting",
+      "vi": "núm vú",
+      "ja": "乳首",
+      "ko": "젖꼭지"
+    },
+    "score": 9
+  },
+  {
+    "label": {
+      "zh": "肚臍",
+      "en": "the navel",
+      "id": "pusar",
+      "vi": "rốn",
+      "ja": "へそ",
+      "ko": "배꼽"
+    },
+    "score": 8
+  },
+  {
+    "label": {
+      "zh": "陰蒂/龜頭",
+      "en": "the clitoris or glans",
+      "id": "klitoris atau kepala penis",
+      "vi": "âm vật hoặc quy đầu",
+      "ja": "クリトリスまたは亀頭",
+      "ko": "클리토리스 또는 귀두"
+    },
+    "score": 10
+  },
+  {
+    "label": {
+      "zh": "陰唇/睪丸",
+      "en": "the labia or testicles",
+      "id": "labia atau testis",
+      "vi": "môi âm hộ hoặc tinh hoàn",
+      "ja": "陰唇または睾丸",
+      "ko": "음순 또는 고환"
+    },
+    "score": 10
+  },
+  {
+    "label": {
+      "zh": "屁股蛋",
+      "en": "the butt cheek",
+      "id": "pipi bokong",
+      "vi": "mông",
+      "ja": "お尻の片側",
+      "ko": "엉덩이"
+    },
+    "score": 7
+  },
+  {
+    "label": {
+      "zh": "膝蓋後側",
+      "en": "behind the knee",
+      "id": "belakang lutut",
+      "vi": "sau đầu gối",
+      "ja": "膝の裏",
+      "ko": "무릎 뒤"
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "大腿內側",
+      "en": "the inner thigh",
+      "id": "paha bagian dalam",
+      "vi": "đùi trong",
+      "ja": "内もも",
+      "ko": "허벅지 안쪽"
+    },
+    "score": 7
+  },
+  {
+    "label": {
+      "zh": "脖子",
+      "en": "the neck",
+      "id": "leher",
+      "vi": "cổ",
+      "ja": "首",
+      "ko": "목"
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "耳朵",
+      "en": "the ear",
+      "id": "telinga",
+      "vi": "tai",
+      "ja": "耳",
+      "ko": "귀"
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "胳肢窩",
+      "en": "the armpit",
+      "id": "ketiak",
+      "vi": "nách",
+      "ja": "脇",
+      "ko": "겨드랑이"
+    },
+    "score": 6
+  }
 ]
