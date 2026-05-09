@@ -1,11 +1,11 @@
 [
-  { "label": "5 秒", "score": 1 },
-  { "label": "20 秒", "score": 3 },
-  { "label": "30 秒", "score": 4 },
-  { "label": "45 秒", "score": 5 },
-  { "label": "60 秒", "score": 7 },
-  { "label": "90 秒", "score": 9 },
-  { "label": "一首歌的副歌的時間", "score": 8 },
-  { "label": "直到對方說可以", "score": 6 },
-  { "label": "三次呼吸", "score": 2 }
+  { "label": { "zh": "5 秒", "en": "5 seconds" }, "score": 1 },
+  { "label": { "zh": "20 秒", "en": "20 seconds" }, "score": 3 },
+  { "label": { "zh": "30 秒", "en": "30 seconds" }, "score": 4 },
+  { "label": { "zh": "45 秒", "en": "45 seconds" }, "score": 5 },
+  { "label": { "zh": "60 秒", "en": "60 seconds" }, "score": 7 },
+  { "label": { "zh": "90 秒", "en": "90 seconds" }, "score": 9 },
+  { "label": { "zh": "一首歌的副歌的時間", "en": "the length of one song chorus" }, "score": 8 },
+  { "label": { "zh": "直到對方說可以", "en": "until your partner says yes" }, "score": 6 },
+  { "label": { "zh": "三次呼吸", "en": "three breaths" }, "score": 2 }
 ]

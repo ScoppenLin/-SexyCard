@@ -36,6 +36,8 @@ type Card = {
 
 type DisplayCard = Card & {
   displayText: string;
+  displayTextEn?: string;
+  titleEn?: string;
   comboText?: string;
   comboScore?: number;
 };
@@ -56,17 +58,268 @@ const cards = cardsData as unknown as Card[];
 const comboActionsStorageKey = "velvetCards.comboActions";
 const comboBodyPartsStorageKey = "velvetCards.comboBodyParts";
 type TimerAudioContext = AudioContext & { webkitAudioContext?: never };
+type LocalizedText = string | {
+  zh: string;
+  en?: string;
+  [language: string]: string | undefined;
+};
+
 type ComboItem = {
-  label: string;
+  label: LocalizedText;
   score: number;
+};
+type LanguageMode = "zh" | "zh-en";
+type CardTranslation = {
+  title: string;
+  text: string;
 };
 
 const customComboItemScore = 5;
+const languageModeStorageKey = "velvetCards.languageMode";
 
 const levelNames: Record<Level, string> = {
   1: "暖身模式",
   2: "升溫模式",
   3: "火辣模式"
+};
+
+const cardTranslations: Record<string, CardTranslation> = {
+  "l1-001": {
+    title: "Three Things You Like",
+    text: "Take turns naming three details you like about your partner tonight. After sharing, give them one slow hug."
+  },
+  "l1-002": {
+    title: "Palm Warmth",
+    text: "Hold your partner's hand for 60 seconds. Just look at each other, with no rush to speak."
+  },
+  "l1-003": {
+    title: "Tonight's Boundaries",
+    text: "Each person shares one thing they want to try tonight and one thing they want to keep off-limits."
+  },
+  "l1-004": {
+    title: "Move Closer Slowly",
+    text: "One person moves closer and stops where the other feels comfortable. Let a nod decide whether to come closer."
+  },
+  "l1-005": {
+    title: "Soft Whisper",
+    text: "Move close to your partner's ear and softly say one thing you have wanted to tell them today."
+  },
+  "l1-006": {
+    title: "Scent Exchange",
+    text: "Choose a scent or clothing detail on you and invite your partner to come close and notice it for 20 seconds."
+  },
+  "l1-007": {
+    title: "Pause Word",
+    text: "Decide tonight's pause word together. If either person says it, everything stops and turns into hugging or talking."
+  },
+  "l1-008": {
+    title: "Shoulder And Neck Ease",
+    text: "Relax your partner's shoulders and neck for 90 seconds. Let them adjust the pressure from 1 to 5."
+  },
+  "l1-009": {
+    title: "Eye Contact",
+    text: "Look at each other for 30 seconds. When it ends, each person shares the strongest feeling they noticed."
+  },
+  "l1-010": {
+    title: "Warm-Up Combo",
+    text: "The system will create a gentle task for you."
+  },
+  "l1-011": {
+    title: "Comfort Score",
+    text: "Each person rates their current relaxation from 1 to 5. The lower score gets to request one comfort adjustment."
+  },
+  "l1-012": {
+    title: "Palm Pause",
+    text: "Place your hand on your partner's palm for 30 seconds. Let them decide whether to hold, relax, or change position."
+  },
+  "l1-013": {
+    title: "One Moment Of Longing",
+    text: "Share the most recent moment when you wanted to be close to your partner. Be as specific as possible."
+  },
+  "l1-014": {
+    title: "Pour Slowly",
+    text: "Pour water or prepare a small item for your partner while keeping eye contact and a slow pace."
+  },
+  "l1-015": {
+    title: "Today's Switch",
+    text: "Each person shares one thing that would help them relax today. The other person only listens and repeats it back."
+  },
+  "l1-016": {
+    title: "Hair Ends Or Fingertips",
+    text: "Choose hair ends or fingertips and give your partner 45 seconds of very light touch."
+  },
+  "l1-017": {
+    title: "Safety Signals",
+    text: "Set three short responses together: continue, slower, pause. You can use them directly for every card after this."
+  },
+  "l1-018": {
+    title: "Ten Centimeters Closer",
+    text: "Sit ten centimeters closer for 20 seconds, then one person says whether they want to stay, move closer, or move back."
+  },
+  "l2-001": {
+    title: "Only Honesty",
+    text: "Say one small thing you want your partner to do more of tonight, and let them choose whether to accept."
+  },
+  "l2-002": {
+    title: "Fingertip Route",
+    text: "Use your fingertip to draw a slow route on your partner's arm or back and let them guess the pattern."
+  },
+  "l2-003": {
+    title: "Three Steps Closer",
+    text: "Move closer to your partner three times, pausing each time until they give clear consent."
+  },
+  "l2-004": {
+    title: "One Command",
+    text: "In a gentle but certain voice, ask your partner to do one simple and comfortable thing."
+  },
+  "l2-005": {
+    title: "Slow Hug",
+    text: "Hug your partner from the front or behind for 45 seconds and let your breathing slowly sync."
+  },
+  "l2-006": {
+    title: "Like List",
+    text: "Each person names three situations that turn them on more, then the other chooses one to keep talking about."
+  },
+  "l2-007": {
+    title: "Dim The Lights",
+    text: "Adjust the lighting, music, or sitting position so the space feels like it belongs only to the two of you."
+  },
+  "l2-008": {
+    title: "Stop At The Edge",
+    text: "Choose a comfortable kind of touch, continue for 30 seconds, then stop and let your partner decide whether to continue."
+  },
+  "l2-009": {
+    title: "Tonight's Keywords",
+    text: "Each person gives tonight one keyword, such as slow, naughty, sweet, or brave. Combine the two words into tonight's rule."
+  },
+  "l2-010": {
+    title: "Heating-Up Combo",
+    text: "The system will create a warmer task for you."
+  },
+  "l2-011": {
+    title: "Preference Exchange",
+    text: "Each person shares one pace they like and one they dislike. The other person confirms it in their own words."
+  },
+  "l2-012": {
+    title: "Pause Three Seconds",
+    text: "Choose a comfortable way to move closer. After each move, pause for three seconds and let your partner decide the next step."
+  },
+  "l2-013": {
+    title: "Tonight's Tone",
+    text: "Ask your partner to choose the tone they want to hear tonight: gentle, certain, playful, or a little naughty."
+  },
+  "l2-014": {
+    title: "Switch The Lead",
+    text: "For the next card, the person who is usually less active decides when to start and when to end."
+  },
+  "l2-015": {
+    title: "Over The Fabric",
+    text: "Over clothing, choose an agreed spot and stay there for 30 seconds. Let your partner decide pressure and distance."
+  },
+  "l2-016": {
+    title: "One Invitation",
+    text: "Use no more than ten words to invite your partner closer. They may accept, modify, or skip."
+  },
+  "l2-017": {
+    title: "Change Position",
+    text: "Change your sitting or standing position and look at each other from a new angle for 20 seconds."
+  },
+  "l2-018": {
+    title: "How To Soothe Me",
+    text: "Share how you want your partner to comfort you tonight if you become shy or nervous."
+  },
+  "l3-001": {
+    title: "Bold Invitation",
+    text: "Say one way you want your partner to lead you tonight, then let them set the timing and pace."
+  },
+  "l3-002": {
+    title: "Temporarily Yours",
+    text: "One person closes their eyes for 45 seconds while the other uses only voice to guide comfortable movement or stillness."
+  },
+  "l3-003": {
+    title: "No Escaping",
+    text: "Your partner asks three intimate questions and you answer honestly. Any question can be skipped with the pause word."
+  },
+  "l3-004": {
+    title: "Unbearably Slow",
+    text: "Choose an agreed intimate touch and slow it to half your usual speed for 60 seconds."
+  },
+  "l3-005": {
+    title: "A Naughtier Name",
+    text: "Each person chooses one nickname or form of address they accept tonight, only during the game."
+  },
+  "l3-006": {
+    title: "Three-Minute Rule",
+    text: "For the next three minutes, one person decides the pace. The other can say slower, pause, or continue at any time."
+  },
+  "l3-007": {
+    title: "Countdown By The Ear",
+    text: "Move close to your partner's ear and count slowly from 10 to 1, leaving a little silence between each number."
+  },
+  "l3-008": {
+    title: "Command And Response",
+    text: "One person gives an intimate command that is not explicit and can be done immediately. The other may accept, modify, or skip."
+  },
+  "l3-009": {
+    title: "Hot Combo",
+    text: "The system will create a bolder task for you."
+  },
+  "l3-010": {
+    title: "Private Combo",
+    text: "The system will create a task that belongs only to this moment."
+  },
+  "l3-011": {
+    title: "Lead Declaration",
+    text: "One person clearly but gently states the pace they want to lead next. The other confirms whether they accept."
+  },
+  "l3-012": {
+    title: "Close, No Touch",
+    text: "Move close enough to feel each other's breath and hold for 30 seconds, without touching yet."
+  },
+  "l3-013": {
+    title: "Only Three Answers",
+    text: "Your partner asks three questions about tonight's preferences. You can only answer like it, slower, or skip."
+  },
+  "l3-014": {
+    title: "Ten Seconds In The Dark",
+    text: "Dim the lights or close your eyes for 10 seconds. When you open them, name the first reason you want to be closer."
+  },
+  "l3-015": {
+    title: "A Little Naughtier",
+    text: "Turn your previous compliment into a bolder version. If your partner laughs, say it again."
+  },
+  "l3-016": {
+    title: "You Call Stop",
+    text: "Choose an agreed intimate way to move closer. The receiving person decides when to call stop."
+  },
+  "l3-017": {
+    title: "Voice Only",
+    text: "For the next 60 seconds, guide your partner only with your voice, without gestures. Let them choose whether to follow."
+  },
+  "l3-018": {
+    title: "Final Choice",
+    text: "Make a bold but adjustable invitation and let your partner keep the final choice."
+  },
+  "combo-001": {
+    title: "Soft Light Combo",
+    text: "The system will create an intimate task for you."
+  },
+  "combo-002": {
+    title: "Tipsy Combo",
+    text: "The system will create an intimate task for you."
+  },
+  "combo-003": {
+    title: "Signal Combo",
+    text: "The system will create an intimate task for you."
+  },
+  "combo-004": {
+    title: "Late Night Combo",
+    text: "The system will create an intimate task for you."
+  },
+  "combo-005": {
+    title: "Black Gold Combo",
+    text: "The system will create an intimate task for you."
+  }
 };
 
 const chineseNumbers: Record<string, number> = {
@@ -92,6 +345,23 @@ function clampScore(value: unknown): number {
   return Math.min(10, Math.max(1, Math.round(value)));
 }
 
+function localizedText(value: LocalizedText, language: "zh" | "en" = "zh"): string {
+  if (typeof value === "string") return language === "zh" ? value : "";
+  return value[language] ?? value.zh ?? "";
+}
+
+function comboLabelKey(item: ComboItem): string {
+  return localizedText(item.label, "zh") || localizedText(item.label, "en");
+}
+
+function readLanguageMode(): LanguageMode {
+  try {
+    return window.localStorage.getItem(languageModeStorageKey) === "zh" ? "zh" : "zh-en";
+  } catch {
+    return "zh-en";
+  }
+}
+
 function normalizeDefaultItems(value: unknown, fallbackScore = customComboItemScore): ComboItem[] {
   if (!Array.isArray(value)) return [];
 
@@ -104,7 +374,17 @@ function normalizeDefaultItems(value: unknown, fallbackScore = customComboItemSc
 
       if (typeof item === "object" && item !== null) {
         const record = item as { label?: unknown; text?: unknown; score?: unknown };
-        const label = String(record.label ?? record.text ?? "").trim();
+        const rawLabel = record.label ?? record.text ?? "";
+
+        if (typeof rawLabel === "object" && rawLabel !== null) {
+          const labelRecord = rawLabel as { zh?: unknown; en?: unknown };
+          const zh = String(labelRecord.zh ?? "").trim();
+          const en = String(labelRecord.en ?? "").trim();
+
+          return zh || en ? { label: { zh: zh || en, en: en || undefined }, score: clampScore(record.score) } : null;
+        }
+
+        const label = String(rawLabel).trim();
         return label ? { label, score: clampScore(record.score) } : null;
       }
 
@@ -118,7 +398,7 @@ const bodyPartDefaults = normalizeDefaultItems(defaultBodyParts);
 const durationDefaults = normalizeDefaultItems(durations, 3);
 
 function itemFromLabel(label: string, defaults: ComboItem[]): ComboItem {
-  const defaultItem = defaults.find((item) => item.label === label);
+  const defaultItem = defaults.find((item) => comboLabelKey(item) === label || localizedText(item.label, "en") === label);
   return defaultItem ?? { label, score: customComboItemScore };
 }
 
@@ -133,18 +413,34 @@ function normalizeCustomList(value: unknown, fallback: ComboItem[]): ComboItem[]
       }
 
       if (typeof item === "object" && item !== null && "label" in item) {
-        const label = String((item as { label?: unknown }).label ?? "").trim();
+        const rawLabel = (item as { label?: unknown }).label;
+        const label = typeof rawLabel === "object" && rawLabel !== null
+          ? String((rawLabel as { zh?: unknown; en?: unknown }).zh ?? (rawLabel as { en?: unknown }).en ?? "").trim()
+          : String(rawLabel ?? "").trim();
         if (!label) return null;
 
-        const defaultItem = fallback.find((candidate) => candidate.label === label);
-        return defaultItem ?? { label, score: clampScore((item as { score?: unknown }).score) };
+        const defaultItem = fallback.find((candidate) => comboLabelKey(candidate) === label);
+        if (defaultItem) return defaultItem;
+
+        if (typeof rawLabel === "object" && rawLabel !== null) {
+          const labelRecord = rawLabel as { zh?: unknown; en?: unknown };
+          return {
+            label: {
+              zh: String(labelRecord.zh ?? labelRecord.en ?? "").trim(),
+              en: String(labelRecord.en ?? "").trim() || undefined
+            },
+            score: clampScore((item as { score?: unknown }).score)
+          };
+        }
+
+        return { label, score: clampScore((item as { score?: unknown }).score) };
       }
 
       return null;
     })
     .filter((item): item is ComboItem => item !== null);
 
-  const deduped = Array.from(new Map(normalized.map((item) => [item.label, item])).values());
+  const deduped = Array.from(new Map(normalized.map((item) => [comboLabelKey(item), item])).values());
 
   return deduped.length ? deduped : fallback;
 }
@@ -201,8 +497,10 @@ function buildDisplayCard(
   comboBodyParts = bodyPartDefaults,
   drawIndex = 0
 ): DisplayCard {
+  const translation = cardTranslations[card.id];
+
   if (card.type !== "combo") {
-    return { ...card, displayText: card.text };
+    return { ...card, displayText: card.text, displayTextEn: translation?.text, titleEn: translation?.title };
   }
 
   const { action, bodyPart, duration, score } = pickProgressiveComboParts(
@@ -211,11 +509,17 @@ function buildDisplayCard(
     durationDefaults,
     drawIndex
   );
-  const comboText = `${action.label}${bodyPart.label}，持續 ${duration.label}。`;
+  const comboText = `${localizedText(action.label)}${localizedText(bodyPart.label)}，持續 ${localizedText(duration.label)}。`;
+  const comboTextEn = `${localizedText(action.label, "en")}${localizedText(bodyPart.label, "en")} for ${localizedText(
+    duration.label,
+    "en"
+  )}.`;
 
   return {
     ...card,
     displayText: comboText,
+    displayTextEn: comboTextEn,
+    titleEn: translation?.title,
     comboText,
     comboScore: score
   };
@@ -359,6 +663,7 @@ function GameContent() {
   const [isManagingCombo, setIsManagingCombo] = useState(false);
   const [newAction, setNewAction] = useState("");
   const [newBodyPart, setNewBodyPart] = useState("");
+  const [languageMode, setLanguageMode] = useState<LanguageMode>("zh-en");
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
     mode: isComboOnly ? "combo" : "level",
@@ -430,8 +735,13 @@ function GameContent() {
     comboBodyPartsRef.current = storedBodyParts;
     setComboActions(storedActions);
     setComboBodyParts(storedBodyParts);
+    setLanguageMode(readLanguageMode());
     setComboSettingsReady(true);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(languageModeStorageKey, languageMode);
+  }, [languageMode]);
 
   useEffect(() => {
     if (hasPulledInitialCardRef.current) return;
@@ -522,14 +832,14 @@ function GameContent() {
 
     if (kind === "action") {
       setComboActions((current) =>
-        current.some((item) => item.label === value) ? current : [...current, { label: value, score: customComboItemScore }]
+        current.some((item) => comboLabelKey(item) === value) ? current : [...current, { label: value, score: customComboItemScore }]
       );
       setNewAction("");
       return;
     }
 
     setComboBodyParts((current) =>
-      current.some((item) => item.label === value) ? current : [...current, { label: value, score: customComboItemScore }]
+      current.some((item) => comboLabelKey(item) === value) ? current : [...current, { label: value, score: customComboItemScore }]
     );
     setNewBodyPart("");
   };
@@ -617,6 +927,14 @@ function GameContent() {
           <Stat label="女跳過" value={stats.femaleSkipped} />
         </div>
 
+        <button
+          className="mb-2 flex min-h-10 items-center justify-center rounded-2xl border border-purple-200/15 bg-purple-950/25 px-4 text-sm font-semibold text-purple-100 active:scale-[0.99]"
+          onClick={() => setLanguageMode((current) => (current === "zh-en" ? "zh" : "zh-en"))}
+          type="button"
+        >
+          {languageMode === "zh-en" ? "中英同時顯示" : "只顯示中文"}
+        </button>
+
         {isComboOnly ? (
           <button
             className="mb-1 flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-gold/20 bg-stone-950/65 px-4 text-sm font-semibold text-gold active:scale-[0.99]"
@@ -636,7 +954,7 @@ function GameContent() {
               label="動作"
               onAdd={() => addCustomItem("action")}
               onInputChange={setNewAction}
-              onRemove={(item) => setComboActions((current) => current.filter((value) => value.label !== item.label))}
+              onRemove={(item) => setComboActions((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
               onReset={() => resetComboItems("action")}
               placeholder="新增動作"
             />
@@ -646,7 +964,7 @@ function GameContent() {
               label="身體部位"
               onAdd={() => addCustomItem("bodyPart")}
               onInputChange={setNewBodyPart}
-              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => value.label !== item.label))}
+              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
               onReset={() => resetComboItems("bodyPart")}
               placeholder="新增身體部位"
             />
@@ -679,9 +997,19 @@ function GameContent() {
                 <h2 className={`mt-8 text-4xl font-semibold leading-tight text-stone-50 ${isDrawing ? "animate-pulse" : ""}`}>
                   {card.title}
                 </h2>
+                {languageMode === "zh-en" && card.titleEn ? (
+                  <p className={`mt-3 text-xl font-semibold leading-snug text-gold/85 ${isDrawing ? "animate-pulse" : ""}`}>
+                    {card.titleEn}
+                  </p>
+                ) : null}
                 <p className={`mt-7 text-2xl font-medium leading-relaxed text-stone-100 ${isDrawing ? "animate-pulse" : ""}`}>
                   {card.displayText}
                 </p>
+                {languageMode === "zh-en" && card.displayTextEn ? (
+                  <p className={`mt-4 text-lg font-medium leading-relaxed text-stone-300 ${isDrawing ? "animate-pulse" : ""}`}>
+                    {card.displayTextEn}
+                  </p>
+                ) : null}
                 {timerSeconds ? (
                   <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-black/25 p-4">
                     <div className="flex items-center gap-3">
@@ -794,14 +1122,14 @@ function ComboListEditor({
         {items.map((item) => (
           <span
             className="inline-flex max-w-full items-center gap-2 rounded-full border border-gold/15 bg-black/25 px-3 py-2 text-sm text-stone-200"
-            key={item.label}
+            key={comboLabelKey(item)}
           >
-            <span className="truncate">{item.label}</span>
+            <span className="truncate">{comboLabelKey(item)}</span>
             <span className="rounded-full bg-gold/10 px-2 py-0.5 text-xs font-semibold text-gold">
               {item.score}
             </span>
             <button
-              aria-label={`刪除${item.label}`}
+              aria-label={`刪除${comboLabelKey(item)}`}
               className="text-stone-400 active:text-red-200 disabled:opacity-30"
               disabled={items.length <= 1}
               onClick={() => onRemove(item)}

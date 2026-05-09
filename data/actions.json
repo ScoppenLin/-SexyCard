@@ -1,15 +1,15 @@
 [
-  { "label": "用指尖慢慢描過", "score": 2 },
-  { "label": "臉頰靠近停留", "score": 2 },
-  { "label": "手掌輕輕按揉", "score": 3 },
-  { "label": "給一個很慢的吻在", "score": 4 },
-  { "label": "用手軸去碰觸", "score": 5 },
-  { "label": "用鼻尖輕輕滑過", "score": 4 },
-  { "label": "用龜頭/奶頭 輕輕滑過", "score": 9 },
-  { "label": "用腳指頭去碰", "score": 5 },
-  { "label": "用額頭去碰", "score": 4 },
-  { "label": "用下巴去戳", "score": 5 },
-  { "label": "用小指去磨", "score": 6 },
-  { "label": "用中指指去壓", "score": 7 },
-  { "label": "用舌頭舔", "score": 8 }
+  { "label": { "zh": "用指尖慢慢描過", "en": "Slowly trace with your fingertips over " }, "score": 2 },
+  { "label": { "zh": "臉頰靠近停留", "en": "Bring your cheek close and linger near " }, "score": 2 },
+  { "label": { "zh": "手掌輕輕按揉", "en": "Gently massage with your palm on " }, "score": 3 },
+  { "label": { "zh": "給一個很慢的吻在", "en": "Give one very slow kiss on " }, "score": 4 },
+  { "label": { "zh": "用手軸去碰觸", "en": "Touch lightly with your forearm against " }, "score": 5 },
+  { "label": { "zh": "用鼻尖輕輕滑過", "en": "Brush softly with the tip of your nose over " }, "score": 4 },
+  { "label": { "zh": "用龜頭/奶頭 輕輕滑過", "en": "Glide your tip or nipple softly over " }, "score": 9 },
+  { "label": { "zh": "用腳指頭去碰", "en": "Touch with your toes against " }, "score": 5 },
+  { "label": { "zh": "用額頭去碰", "en": "Touch with your forehead against " }, "score": 4 },
+  { "label": { "zh": "用下巴去戳", "en": "Nudge gently with your chin against " }, "score": 5 },
+  { "label": { "zh": "用小指去磨", "en": "Tease slowly with your little finger on " }, "score": 6 },
+  { "label": { "zh": "用中指指去壓", "en": "Press gently with your middle finger on " }, "score": 7 },
+  { "label": { "zh": "用舌頭舔", "en": "Lick slowly over " }, "score": 8 }
 ]
