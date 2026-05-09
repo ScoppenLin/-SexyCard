@@ -816,10 +816,10 @@ function GameContent() {
         </article>
 
         <div className="grid grid-cols-2 gap-3 pb-3">
-          <ActionButton icon={Check} label="男生完成" marker="♂" onClick={() => complete("male")} tone="gold" disabled={isDrawing} />
-          <ActionButton icon={Check} label="女生完成" marker="♀" onClick={() => complete("female")} tone="gold" disabled={isDrawing} />
-          <ActionButton icon={Shuffle} label="男生跳過" marker="♂" onClick={() => skip("male")} tone="dark" disabled={isDrawing} />
-          <ActionButton icon={Shuffle} label="女生跳過" marker="♀" onClick={() => skip("female")} tone="dark" disabled={isDrawing} />
+          <ActionButton actor="male" icon={Check} label="男生完成" marker="♂" onClick={() => complete("male")} tone="dark" disabled={isDrawing} />
+          <ActionButton actor="female" icon={Check} label="女生完成" marker="♀" onClick={() => complete("female")} tone="dark" disabled={isDrawing} />
+          <ActionButton actor="male" icon={Shuffle} label="男生跳過" marker="♂" onClick={() => skip("male")} tone="dark" disabled={isDrawing} />
+          <ActionButton actor="female" icon={Shuffle} label="女生跳過" marker="♀" onClick={() => skip("female")} tone="dark" disabled={isDrawing} />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
             label={isComboOnly ? "限制級" : "降一級"}
@@ -935,6 +935,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 function ActionButton({
+  actor,
   disabled,
   icon: Icon,
   label,
@@ -942,6 +943,7 @@ function ActionButton({
   onClick,
   tone
 }: {
+  actor?: "male" | "female";
   disabled?: boolean;
   icon: ElementType;
   label: string;
@@ -950,22 +952,34 @@ function ActionButton({
   tone: "gold" | "dark";
 }) {
   const toneClass =
-    tone === "gold"
+    actor === "male"
+      ? "border-sky-300/30 bg-gradient-to-br from-[#244a7e] via-[#1d285a] to-[#120d22] text-sky-100 shadow-[0_16px_32px_rgba(36,74,126,0.24)]"
+      : actor === "female"
+        ? "border-rose-300/30 bg-gradient-to-br from-[#8a2c55] via-[#55224f] to-[#160d22] text-rose-100 shadow-[0_16px_32px_rgba(138,44,85,0.22)]"
+        : tone === "gold"
       ? "border-gold/30 bg-gradient-to-br from-gold to-[#8f6528] text-stone-950"
       : "border-gold/15 bg-stone-950/65 text-stone-100";
+  const markerClass =
+    actor === "male"
+      ? "text-sky-100/70"
+      : actor === "female"
+        ? "text-rose-100/70"
+        : "text-stone-100/50";
 
   return (
     <button
       aria-label={label}
-      className={`relative flex min-h-14 items-center justify-center rounded-2xl border px-4 text-base font-semibold shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-35 ${toneClass}`}
+      className={`relative flex min-h-16 items-center justify-center overflow-hidden rounded-2xl border px-4 text-base font-semibold active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-35 ${toneClass}`}
       disabled={disabled}
       onClick={onClick}
       title={label}
       type="button"
     >
-      <Icon aria-hidden="true" size={22} />
+      <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-black/20 backdrop-blur">
+        <Icon aria-hidden="true" size={22} />
+      </span>
       {marker ? (
-        <span aria-hidden="true" className="absolute right-3 top-2 text-sm font-semibold leading-none">
+        <span aria-hidden="true" className={`absolute right-3 top-1/2 -translate-y-1/2 text-[2.6rem] font-semibold leading-none ${markerClass}`}>
           {marker}
         </span>
       ) : null}
