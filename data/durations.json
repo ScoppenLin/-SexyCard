@@ -1,11 +1,101 @@
 [
-  { "label": { "zh": "5 秒", "en": "5 seconds" }, "score": 1 },
-  { "label": { "zh": "20 秒", "en": "20 seconds" }, "score": 3 },
-  { "label": { "zh": "30 秒", "en": "30 seconds" }, "score": 4 },
-  { "label": { "zh": "45 秒", "en": "45 seconds" }, "score": 5 },
-  { "label": { "zh": "60 秒", "en": "60 seconds" }, "score": 7 },
-  { "label": { "zh": "90 秒", "en": "90 seconds" }, "score": 9 },
-  { "label": { "zh": "一首歌的副歌的時間", "en": "the length of one song chorus" }, "score": 8 },
-  { "label": { "zh": "直到對方說可以", "en": "until your partner says yes" }, "score": 6 },
-  { "label": { "zh": "三次呼吸", "en": "three breaths" }, "score": 2 }
+  {
+    "label": {
+      "zh": "5 秒",
+      "en": "5 seconds",
+      "id": "5 detik",
+      "vi": "5 giây",
+      "ja": "5秒",
+      "ko": "5초"
+    },
+    "score": 1
+  },
+  {
+    "label": {
+      "zh": "20 秒",
+      "en": "20 seconds",
+      "id": "20 detik",
+      "vi": "20 giây",
+      "ja": "20秒",
+      "ko": "20초"
+    },
+    "score": 3
+  },
+  {
+    "label": {
+      "zh": "30 秒",
+      "en": "30 seconds",
+      "id": "30 detik",
+      "vi": "30 giây",
+      "ja": "30秒",
+      "ko": "30초"
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "45 秒",
+      "en": "45 seconds",
+      "id": "45 detik",
+      "vi": "45 giây",
+      "ja": "45秒",
+      "ko": "45초"
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "60 秒",
+      "en": "60 seconds",
+      "id": "60 detik",
+      "vi": "60 giây",
+      "ja": "60秒",
+      "ko": "60초"
+    },
+    "score": 7
+  },
+  {
+    "label": {
+      "zh": "90 秒",
+      "en": "90 seconds",
+      "id": "90 detik",
+      "vi": "90 giây",
+      "ja": "90秒",
+      "ko": "90초"
+    },
+    "score": 9
+  },
+  {
+    "label": {
+      "zh": "一首歌的副歌的時間",
+      "en": "the length of one song chorus",
+      "id": "durasi satu bagian chorus lagu",
+      "vi": "độ dài một đoạn điệp khúc",
+      "ja": "曲のサビの長さ",
+      "ko": "노래 후렴 한 번의 길이"
+    },
+    "score": 8
+  },
+  {
+    "label": {
+      "zh": "直到對方說可以",
+      "en": "until your partner says yes",
+      "id": "sampai pasangan berkata boleh",
+      "vi": "đến khi đối phương nói được",
+      "ja": "相手がいいと言うまで",
+      "ko": "상대가 괜찮다고 말할 때까지"
+    },
+    "score": 6
+  },
+  {
+    "label": {
+      "zh": "三次呼吸",
+      "en": "three breaths",
+      "id": "tiga tarikan napas",
+      "vi": "ba nhịp thở",
+      "ja": "三回の呼吸",
+      "ko": "세 번의 호흡"
+    },
+    "score": 2
+  }
 ]
