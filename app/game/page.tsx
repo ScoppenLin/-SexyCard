@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState, type ElementType } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ElementType } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, Check, Clock3, Home, Play, RefreshCcw, Shuffle, Square, Wand2 } from "lucide-react";
@@ -37,6 +37,7 @@ type GameStats = {
 };
 
 const cards = cardsData as unknown as Card[];
+type TimerAudioContext = AudioContext & { webkitAudioContext?: never };
 
 const levelNames: Record<Level, string> = {
   1: "暖身模式",
@@ -125,38 +126,42 @@ function formatTime(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function playTimerSound(kind: "start" | "end") {
+function createTimerAudioContext(): TimerAudioContext | null {
   const AudioContextClass =
     window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) return;
+  if (!AudioContextClass) return null;
 
-  const audio = new AudioContextClass();
-  const now = audio.currentTime;
+  return new AudioContextClass() as TimerAudioContext;
+}
+
+function playTimerSound(audio: AudioContext, kind: "start" | "end", startAt = audio.currentTime): OscillatorNode[] {
   const gain = audio.createGain();
   gain.connect(audio.destination);
+  const nodes: OscillatorNode[] = [];
 
   const playTone = (frequency: number, start: number, duration: number) => {
     const oscillator = audio.createOscillator();
-    oscillator.type = "sine";
+    oscillator.type = "triangle";
     oscillator.frequency.setValueAtTime(frequency, start);
     oscillator.connect(gain);
     oscillator.start(start);
     oscillator.stop(start + duration);
+    nodes.push(oscillator);
   };
 
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "start" ? 0.22 : 0.72));
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.32, startAt + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + (kind === "start" ? 0.22 : 0.72));
 
   if (kind === "start") {
-    playTone(660, now, 0.18);
+    playTone(660, startAt, 0.18);
   } else {
-    playTone(660, now, 0.18);
-    playTone(880, now + 0.2, 0.2);
-    playTone(1046, now + 0.42, 0.24);
+    playTone(660, startAt, 0.18);
+    playTone(880, startAt + 0.2, 0.2);
+    playTone(1046, startAt + 0.42, 0.24);
   }
 
-  window.setTimeout(() => void audio.close(), kind === "start" ? 350 : 900);
+  return nodes;
 }
 
 function GameContent() {
@@ -169,6 +174,8 @@ function GameContent() {
   const timerSeconds = useMemo(() => (card ? parseTimerSeconds(card.displayText) : null), [card]);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const timerAudioRef = useRef<AudioContext | null>(null);
+  const scheduledEndSoundRef = useRef<OscillatorNode[]>([]);
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
     totalDraws: 0,
@@ -199,6 +206,14 @@ function GameContent() {
   useEffect(() => {
     setRemainingSeconds(timerSeconds);
     setIsTimerRunning(false);
+    scheduledEndSoundRef.current.forEach((node) => {
+      try {
+        node.stop();
+      } catch {
+        // The tone may already have ended.
+      }
+    });
+    scheduledEndSoundRef.current = [];
   }, [card?.id, timerSeconds]);
 
   useEffect(() => {
@@ -206,7 +221,6 @@ function GameContent() {
 
     if (remainingSeconds <= 0) {
       setIsTimerRunning(false);
-      playTimerSound("end");
       return;
     }
 
@@ -217,11 +231,34 @@ function GameContent() {
     return () => window.clearTimeout(timerId);
   }, [isTimerRunning, remainingSeconds]);
 
-  const startTimer = () => {
+  useEffect(() => {
+    return () => {
+      void timerAudioRef.current?.close();
+    };
+  }, []);
+
+  const startTimer = async () => {
     if (!timerSeconds) return;
+    if (!timerAudioRef.current || timerAudioRef.current.state === "closed") {
+      timerAudioRef.current = createTimerAudioContext();
+    }
+
+    const audio = timerAudioRef.current;
+    if (audio) {
+      await audio.resume();
+      playTimerSound(audio, "start");
+      scheduledEndSoundRef.current.forEach((node) => {
+        try {
+          node.stop();
+        } catch {
+          // The tone may already have ended.
+        }
+      });
+      scheduledEndSoundRef.current = playTimerSound(audio, "end", audio.currentTime + timerSeconds);
+    }
+
     setRemainingSeconds((current) => (current === null || current <= 0 ? timerSeconds : current));
     setIsTimerRunning(true);
-    playTimerSound("start");
   };
 
   const complete = () => {
