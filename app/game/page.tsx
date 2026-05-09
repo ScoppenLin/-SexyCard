@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, Check, Home, RefreshCcw, Shuffle, Square, Wand2 } from "lucide-react";
+import { ArrowDown, Check, Clock3, Home, Play, RefreshCcw, Shuffle, Square, Wand2 } from "lucide-react";
 import cardsData from "@/data/cards.json";
 import actions from "@/data/actions.json";
 import bodyParts from "@/data/bodyParts.json";
@@ -42,6 +42,20 @@ const levelNames: Record<Level, string> = {
   1: "暖身模式",
   2: "升溫模式",
   3: "火辣模式"
+};
+
+const chineseNumbers: Record<string, number> = {
+  一: 1,
+  二: 2,
+  兩: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+  十: 10
 };
 
 function randomItem<T>(items: T[]): T {
@@ -83,6 +97,68 @@ function normalizeLevel(value: string | null): Level {
   return 1;
 }
 
+function parseTimeValue(value: string): number | null {
+  if (/^\d+$/.test(value)) return Number(value);
+  if (value === "十") return 10;
+  if (value.startsWith("十")) return 10 + (chineseNumbers[value.slice(1)] ?? 0);
+  if (value.endsWith("十")) return (chineseNumbers[value.slice(0, 1)] ?? 0) * 10;
+  if (value.includes("十")) {
+    const [tens, ones] = value.split("十");
+    return (chineseNumbers[tens] ?? 1) * 10 + (chineseNumbers[ones] ?? 0);
+  }
+  return chineseNumbers[value] ?? null;
+}
+
+function parseTimerSeconds(text: string): number | null {
+  const match = text.match(/(\d+|[一二兩三四五六七八九十]{1,3})\s*(秒|分鐘)/);
+  if (!match) return null;
+
+  const amount = parseTimeValue(match[1]);
+  if (!amount) return null;
+
+  return match[2] === "分鐘" ? amount * 60 : amount;
+}
+
+function formatTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function playTimerSound(kind: "start" | "end") {
+  const AudioContextClass =
+    window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return;
+
+  const audio = new AudioContextClass();
+  const now = audio.currentTime;
+  const gain = audio.createGain();
+  gain.connect(audio.destination);
+
+  const playTone = (frequency: number, start: number, duration: number) => {
+    const oscillator = audio.createOscillator();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, start);
+    oscillator.connect(gain);
+    oscillator.start(start);
+    oscillator.stop(start + duration);
+  };
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "start" ? 0.22 : 0.72));
+
+  if (kind === "start") {
+    playTone(660, now, 0.18);
+  } else {
+    playTone(660, now, 0.18);
+    playTone(880, now + 0.2, 0.2);
+    playTone(1046, now + 0.42, 0.24);
+  }
+
+  window.setTimeout(() => void audio.close(), kind === "start" ? 350 : 900);
+}
+
 function GameContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -90,6 +166,9 @@ function GameContent() {
   const initialLevel = useMemo(() => normalizeLevel(searchParams.get("level")), [searchParams]);
   const [currentLevel, setCurrentLevel] = useState<Level>(initialLevel);
   const [card, setCard] = useState<DisplayCard | null>(null);
+  const timerSeconds = useMemo(() => (card ? parseTimerSeconds(card.displayText) : null), [card]);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
     totalDraws: 0,
@@ -116,6 +195,34 @@ function GameContent() {
   useEffect(() => {
     window.localStorage.setItem("velvetCards.currentGame", JSON.stringify(stats));
   }, [stats]);
+
+  useEffect(() => {
+    setRemainingSeconds(timerSeconds);
+    setIsTimerRunning(false);
+  }, [card?.id, timerSeconds]);
+
+  useEffect(() => {
+    if (!isTimerRunning || remainingSeconds === null) return;
+
+    if (remainingSeconds <= 0) {
+      setIsTimerRunning(false);
+      playTimerSound("end");
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      setRemainingSeconds((current) => (current === null ? null : Math.max(0, current - 1)));
+    }, 1000);
+
+    return () => window.clearTimeout(timerId);
+  }, [isTimerRunning, remainingSeconds]);
+
+  const startTimer = () => {
+    if (!timerSeconds) return;
+    setRemainingSeconds((current) => (current === null || current <= 0 ? timerSeconds : current));
+    setIsTimerRunning(true);
+    playTimerSound("start");
+  };
 
   const complete = () => {
     setStats((current) => ({ ...current, completed: current.completed + 1 }));
@@ -196,6 +303,28 @@ function GameContent() {
                 </div>
                 <h2 className="mt-8 text-4xl font-semibold leading-tight text-stone-50">{card.title}</h2>
                 <p className="mt-7 text-2xl font-medium leading-relaxed text-stone-100">{card.displayText}</p>
+                {timerSeconds ? (
+                  <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-black/25 p-4">
+                    <div className="flex items-center gap-3">
+                      <Clock3 aria-hidden="true" className="text-gold" size={22} />
+                      <div>
+                        <p className="text-xs text-stone-400">計時</p>
+                        <p className="text-3xl font-semibold text-stone-50">
+                          {formatTime(remainingSeconds ?? timerSeconds)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gold/30 bg-gold px-4 text-sm font-semibold text-stone-950 active:scale-[0.98] disabled:opacity-60"
+                      disabled={isTimerRunning}
+                      onClick={startTimer}
+                      type="button"
+                    >
+                      <Play aria-hidden="true" size={16} />
+                      {isTimerRunning ? "計時中" : remainingSeconds === 0 ? "再一次" : "開始"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
               <p className="mt-8 border-t border-gold/15 pt-5 text-sm leading-6 text-stone-300">
                 保持可溝通。任何一方不舒服時，這張牌自動改成擁抱、喝水或休息。
