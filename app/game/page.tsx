@@ -10,7 +10,6 @@ import {
   Home,
   Play,
   Plus,
-  RefreshCcw,
   Settings2,
   Shuffle,
   Square,
@@ -42,10 +41,12 @@ type DisplayCard = Card & {
 
 type GameStats = {
   level: Level;
+  mode: "level" | "combo";
   totalDraws: number;
-  completed: number;
-  skipped: number;
-  swapped: number;
+  maleCompleted: number;
+  femaleCompleted: number;
+  maleSkipped: number;
+  femaleSkipped: number;
   startedAt: string;
   endedAt?: string;
 };
@@ -224,10 +225,12 @@ function GameContent() {
   const [newBodyPart, setNewBodyPart] = useState("");
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
+    mode: isComboOnly ? "combo" : "level",
     totalDraws: 0,
-    completed: 0,
-    skipped: 0,
-    swapped: 0,
+    maleCompleted: 0,
+    femaleCompleted: 0,
+    maleSkipped: 0,
+    femaleSkipped: 0,
     startedAt: new Date().toISOString()
   });
 
@@ -239,6 +242,7 @@ function GameContent() {
     setStats((current) => ({
       ...current,
       level,
+      mode: isComboOnly ? "combo" : "level",
       totalDraws: current.totalDraws + 1
     }));
   }, [isComboOnly]);
@@ -359,18 +363,21 @@ function GameContent() {
     setNewBodyPart("");
   };
 
-  const complete = () => {
-    setStats((current) => ({ ...current, completed: current.completed + 1 }));
+  const complete = (player: "male" | "female") => {
+    setStats((current) => ({
+      ...current,
+      maleCompleted: player === "male" ? current.maleCompleted + 1 : current.maleCompleted,
+      femaleCompleted: player === "female" ? current.femaleCompleted + 1 : current.femaleCompleted
+    }));
     pullCard(currentLevel, card?.id);
   };
 
-  const skip = () => {
-    setStats((current) => ({ ...current, skipped: current.skipped + 1 }));
-    pullCard(currentLevel, card?.id);
-  };
-
-  const swap = () => {
-    setStats((current) => ({ ...current, swapped: current.swapped + 1 }));
+  const skip = (player: "male" | "female") => {
+    setStats((current) => ({
+      ...current,
+      maleSkipped: player === "male" ? current.maleSkipped + 1 : current.maleSkipped,
+      femaleSkipped: player === "female" ? current.femaleSkipped + 1 : current.femaleSkipped
+    }));
     pullCard(currentLevel, card?.id);
   };
 
@@ -415,11 +422,12 @@ function GameContent() {
           </button>
         </header>
 
-        <div className="grid grid-cols-4 gap-2 py-3 text-center">
+        <div className="grid grid-cols-5 gap-2 py-3 text-center">
           <Stat label="抽卡" value={stats.totalDraws} />
-          <Stat label="完成" value={stats.completed} />
-          <Stat label="跳過" value={stats.skipped} />
-          <Stat label="換牌" value={stats.swapped} />
+          <Stat label="男完成" value={stats.maleCompleted} />
+          <Stat label="女完成" value={stats.femaleCompleted} />
+          <Stat label="男跳過" value={stats.maleSkipped} />
+          <Stat label="女跳過" value={stats.femaleSkipped} />
         </div>
 
         {isComboOnly ? (
@@ -507,9 +515,10 @@ function GameContent() {
         </article>
 
         <div className="grid grid-cols-2 gap-3 pb-3">
-          <ActionButton icon={Check} label="完成" onClick={complete} tone="gold" />
-          <ActionButton icon={Shuffle} label="跳過" onClick={skip} tone="dark" />
-          <ActionButton icon={RefreshCcw} label="換一張" onClick={swap} tone="dark" />
+          <ActionButton icon={Check} label="男生完成" onClick={() => complete("male")} tone="gold" />
+          <ActionButton icon={Check} label="女生完成" onClick={() => complete("female")} tone="gold" />
+          <ActionButton icon={Shuffle} label="男生跳過" onClick={() => skip("male")} tone="dark" />
+          <ActionButton icon={Shuffle} label="女生跳過" onClick={() => skip("female")} tone="dark" />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
             label={isComboOnly ? "限制級" : "降一級"}
