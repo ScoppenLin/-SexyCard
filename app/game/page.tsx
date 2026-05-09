@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, Check, Home, RefreshCcw, Shuffle, Square } from "lucide-react";
+import { ArrowDown, Check, Home, RefreshCcw, Shuffle, Square, Wand2 } from "lucide-react";
 import cardsData from "@/data/cards.json";
 import actions from "@/data/actions.json";
 import bodyParts from "@/data/bodyParts.json";
@@ -71,6 +71,12 @@ function drawCard(level: Level, previousId?: string): DisplayCard {
   return buildDisplayCard(randomItem(candidates));
 }
 
+function drawComboCard(previousId?: string): DisplayCard {
+  const pool = cards.filter((card) => card.type === "combo");
+  const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
+  return buildDisplayCard(randomItem(candidates));
+}
+
 function normalizeLevel(value: string | null): Level {
   if (value === "2") return 2;
   if (value === "3") return 3;
@@ -80,6 +86,7 @@ function normalizeLevel(value: string | null): Level {
 function GameContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isComboOnly = searchParams.get("mode") === "combo";
   const initialLevel = useMemo(() => normalizeLevel(searchParams.get("level")), [searchParams]);
   const [currentLevel, setCurrentLevel] = useState<Level>(initialLevel);
   const [card, setCard] = useState<DisplayCard | null>(null);
@@ -93,14 +100,14 @@ function GameContent() {
   });
 
   const pullCard = useCallback((level: Level, previousId?: string) => {
-    const nextCard = drawCard(level, previousId);
+    const nextCard = isComboOnly ? drawComboCard(previousId) : drawCard(level, previousId);
     setCard(nextCard);
     setStats((current) => ({
       ...current,
       level,
       totalDraws: current.totalDraws + 1
     }));
-  }, []);
+  }, [isComboOnly]);
 
   useEffect(() => {
     pullCard(initialLevel);
@@ -149,8 +156,12 @@ function GameContent() {
             <Home aria-hidden="true" size={20} />
           </Link>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.28em] text-gold/75">Level {currentLevel}</p>
-            <h1 className="text-lg font-semibold text-stone-50">{levelNames[currentLevel]}</h1>
+            <p className="text-xs uppercase tracking-[0.28em] text-gold/75">
+              {isComboOnly ? "Combo" : `Level ${currentLevel}`}
+            </p>
+            <h1 className="text-lg font-semibold text-stone-50">
+              {isComboOnly ? "組合牌模式" : levelNames[currentLevel]}
+            </h1>
           </div>
           <button
             aria-label="結束遊戲"
@@ -199,7 +210,13 @@ function GameContent() {
           <ActionButton icon={Check} label="完成" onClick={complete} tone="gold" />
           <ActionButton icon={Shuffle} label="跳過" onClick={skip} tone="dark" />
           <ActionButton icon={RefreshCcw} label="換一張" onClick={swap} tone="dark" />
-          <ActionButton icon={ArrowDown} label="降一級" onClick={lowerLevel} tone="dark" disabled={currentLevel === 1} />
+          <ActionButton
+            icon={isComboOnly ? Wand2 : ArrowDown}
+            label={isComboOnly ? "組合中" : "降一級"}
+            onClick={lowerLevel}
+            tone="dark"
+            disabled={isComboOnly || currentLevel === 1}
+          />
         </div>
 
         <button
