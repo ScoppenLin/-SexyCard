@@ -66,7 +66,7 @@ function buildDisplayCard(card: Card): DisplayCard {
 }
 
 function drawCard(level: Level, previousId?: string): DisplayCard {
-  const pool = cards.filter((card) => card.level === level);
+  const pool = cards.filter((card) => card.level === level && card.type !== "combo");
   const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
   return buildDisplayCard(randomItem(candidates));
 }
