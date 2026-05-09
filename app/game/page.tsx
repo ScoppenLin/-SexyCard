@@ -37,6 +37,7 @@ type Card = {
 type DisplayCard = Card & {
   displayText: string;
   comboText?: string;
+  comboScore?: number;
 };
 
 type GameStats = {
@@ -52,11 +53,68 @@ type GameStats = {
 };
 
 const cards = cardsData as unknown as Card[];
-const actionDefaults = defaultActions as string[];
-const bodyPartDefaults = defaultBodyParts as string[];
+const defaultActionLabels = defaultActions as string[];
+const defaultBodyPartLabels = defaultBodyParts as string[];
 const comboActionsStorageKey = "velvetCards.comboActions";
 const comboBodyPartsStorageKey = "velvetCards.comboBodyParts";
 type TimerAudioContext = AudioContext & { webkitAudioContext?: never };
+type ComboItem = {
+  label: string;
+  score: number;
+};
+
+const customComboItemScore = 5;
+
+const defaultActionScores: Record<string, number> = {
+  "用指尖慢慢描過": 2,
+  "臉頰靠近停留": 2,
+  "手掌輕輕按揉": 3,
+  "給一個很慢的吻在": 4,
+  "用鼻尖輕輕滑過": 4,
+  "用額頭去碰": 4,
+  "用腳指頭去碰": 5,
+  "用下巴去戳": 5,
+  "用手軸去碰觸": 5,
+  "用小指去磨": 6,
+  "用中指指去壓": 7,
+  "用舌頭舔": 8,
+  "用龜頭/奶頭 輕輕滑過": 9
+};
+
+const defaultBodyPartScores: Record<string, number> = {
+  "手心": 1,
+  "手背": 1,
+  "肩膀": 2,
+  "手臂": 2,
+  "背部": 3,
+  "臉頰": 3,
+  "鼻尖": 3,
+  "後頸": 4,
+  "耳邊": 4,
+  "耳朵": 4,
+  "脖子": 5,
+  "腰側": 5,
+  "鎖骨附近": 5,
+  "膝蓋後側": 5,
+  "胳肢窩": 6,
+  "大腿內側": 7,
+  "嘴唇": 7,
+  "屁股蛋": 7,
+  "肚臍": 8,
+  "乳頭": 9,
+  "陰唇/睪丸": 10,
+  "陰蒂/龜頭": 10
+};
+
+const actionDefaults = defaultActionLabels.map((label) => ({
+  label,
+  score: defaultActionScores[label] ?? customComboItemScore
+}));
+
+const bodyPartDefaults = defaultBodyPartLabels.map((label) => ({
+  label,
+  score: defaultBodyPartScores[label] ?? customComboItemScore
+}));
 
 const levelNames: Record<Level, string> = {
   1: "暖身模式",
@@ -82,39 +140,105 @@ function randomItem<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function normalizeCustomList(value: unknown, fallback: string[]): string[] {
+function clampScore(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return customComboItemScore;
+  return Math.min(10, Math.max(1, Math.round(value)));
+}
+
+function itemFromLabel(label: string, defaults: ComboItem[], scoreMap: Record<string, number>): ComboItem {
+  const defaultItem = defaults.find((item) => item.label === label);
+  return defaultItem ?? { label, score: scoreMap[label] ?? customComboItemScore };
+}
+
+function normalizeCustomList(value: unknown, fallback: ComboItem[], scoreMap: Record<string, number>): ComboItem[] {
   if (!Array.isArray(value)) return fallback;
 
   const normalized = value
-    .filter((item): item is string => typeof item === "string")
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .map((item): ComboItem | null => {
+      if (typeof item === "string") {
+        const label = item.trim();
+        return label ? itemFromLabel(label, fallback, scoreMap) : null;
+      }
 
-  return Array.from(new Set(normalized)).length ? Array.from(new Set(normalized)) : fallback;
+      if (typeof item === "object" && item !== null && "label" in item) {
+        const label = String((item as { label?: unknown }).label ?? "").trim();
+        if (!label) return null;
+
+        const defaultItem = fallback.find((candidate) => candidate.label === label);
+        return defaultItem ?? { label, score: clampScore((item as { score?: unknown }).score) };
+      }
+
+      return null;
+    })
+    .filter((item): item is ComboItem => item !== null);
+
+  const deduped = Array.from(new Map(normalized.map((item) => [item.label, item])).values());
+
+  return deduped.length ? deduped : fallback;
 }
 
-function readStoredList(key: string, fallback: string[]): string[] {
+function serializeComboItems(items: ComboItem[]): ComboItem[] {
+  return items.map((item) => ({ label: item.label, score: item.score }));
+}
+
+function readStoredList(key: string, fallback: ComboItem[], scoreMap: Record<string, number>): ComboItem[] {
   try {
-    return normalizeCustomList(JSON.parse(window.localStorage.getItem(key) ?? "null"), fallback);
+    return normalizeCustomList(JSON.parse(window.localStorage.getItem(key) ?? "null"), fallback, scoreMap);
   } catch {
     return fallback;
   }
 }
 
-function buildDisplayCard(card: Card, comboActions = actionDefaults, comboBodyParts = bodyPartDefaults): DisplayCard {
+function pickProgressiveComboPair(actions: ComboItem[], bodyParts: ComboItem[], drawIndex: number) {
+  const climb = Math.min(11, drawIndex * 0.55);
+  const targetScore = 6 + climb + (Math.random() * 5 - 2.5);
+  const pairs = actions.flatMap((action) =>
+    bodyParts.map((bodyPart) => ({
+      action,
+      bodyPart,
+      score: action.score + bodyPart.score
+    }))
+  );
+  const weightedPairs = pairs.map((pair) => {
+    const distance = Math.abs(pair.score - targetScore);
+    const surpriseBonus = Math.random() < 0.16 ? 2.6 : 1;
+    const highScoreLift = 1 + Math.max(0, pair.score - 8) * 0.04;
+
+    return {
+      pair,
+      weight: (1 / Math.pow(distance + 1, 1.75)) * surpriseBonus * highScoreLift
+    };
+  });
+  const totalWeight = weightedPairs.reduce((sum, item) => sum + item.weight, 0);
+  let cursor = Math.random() * totalWeight;
+
+  for (const item of weightedPairs) {
+    cursor -= item.weight;
+    if (cursor <= 0) return item.pair;
+  }
+
+  return weightedPairs[weightedPairs.length - 1].pair;
+}
+
+function buildDisplayCard(
+  card: Card,
+  comboActions = actionDefaults,
+  comboBodyParts = bodyPartDefaults,
+  drawIndex = 0
+): DisplayCard {
   if (card.type !== "combo") {
     return { ...card, displayText: card.text };
   }
 
-  const action = randomItem(comboActions);
-  const bodyPart = randomItem(comboBodyParts);
+  const { action, bodyPart, score } = pickProgressiveComboPair(comboActions, comboBodyParts, drawIndex);
   const duration = randomItem(durations);
-  const comboText = `${action}${bodyPart}，持續 ${duration}。`;
+  const comboText = `${action.label}${bodyPart.label}，持續 ${duration}。`;
 
   return {
     ...card,
     displayText: comboText,
-    comboText
+    comboText,
+    comboScore: score
   };
 }
 
@@ -124,18 +248,18 @@ function drawCard(level: Level, previousId?: string): DisplayCard {
   return buildDisplayCard(randomItem(candidates));
 }
 
-function drawComboCard(comboActions: string[], comboBodyParts: string[], previousId?: string): DisplayCard {
+function drawComboCard(comboActions: ComboItem[], comboBodyParts: ComboItem[], drawIndex: number, previousId?: string): DisplayCard {
   const pool = cards.filter((card) => card.type === "combo");
   const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
-  return buildDisplayCard(randomItem(candidates), comboActions, comboBodyParts);
+  return buildDisplayCard(randomItem(candidates), comboActions, comboBodyParts, drawIndex);
 }
 
-function makePreviewDeck(level: Level, isComboOnly: boolean, comboActions: string[], comboBodyParts: string[]): DisplayCard[] {
+function makePreviewDeck(level: Level, isComboOnly: boolean, comboActions: ComboItem[], comboBodyParts: ComboItem[], drawIndex = 0): DisplayCard[] {
   const pool = isComboOnly
     ? cards.filter((previewCard) => previewCard.type === "combo")
     : cards.filter((previewCard) => previewCard.level === level && previewCard.type !== "combo");
 
-  return pool.map((previewCard) => buildDisplayCard(previewCard, comboActions, comboBodyParts));
+  return pool.map((previewCard, index) => buildDisplayCard(previewCard, comboActions, comboBodyParts, drawIndex + index));
 }
 
 function normalizeLevel(value: string | null): Level {
@@ -246,10 +370,11 @@ function GameContent() {
   const drawAudioRef = useRef<AudioContext | null>(null);
   const revealTimeoutsRef = useRef<number[]>([]);
   const scheduledEndSoundRef = useRef<OscillatorNode[]>([]);
-  const [comboActions, setComboActions] = useState<string[]>(actionDefaults);
-  const [comboBodyParts, setComboBodyParts] = useState<string[]>(bodyPartDefaults);
+  const [comboActions, setComboActions] = useState<ComboItem[]>(actionDefaults);
+  const [comboBodyParts, setComboBodyParts] = useState<ComboItem[]>(bodyPartDefaults);
   const comboActionsRef = useRef(actionDefaults);
   const comboBodyPartsRef = useRef(bodyPartDefaults);
+  const statsRef = useRef<GameStats | null>(null);
   const hasPulledInitialCardRef = useRef(false);
   const [comboSettingsReady, setComboSettingsReady] = useState(false);
   const [isManagingCombo, setIsManagingCombo] = useState(false);
@@ -265,6 +390,7 @@ function GameContent() {
     femaleSkipped: 0,
     startedAt: new Date().toISOString()
   });
+  statsRef.current = stats;
 
   const clearRevealTimers = useCallback(() => {
     revealTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
@@ -284,10 +410,11 @@ function GameContent() {
 
   const pullCard = useCallback((level: Level, previousId?: string) => {
     clearRevealTimers();
+    const drawIndex = statsRef.current?.totalDraws ?? 0;
     const nextCard = isComboOnly
-      ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, previousId)
+      ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, drawIndex, previousId)
       : drawCard(level, previousId);
-    const previewDeck = makePreviewDeck(level, isComboOnly, comboActionsRef.current, comboBodyPartsRef.current);
+    const previewDeck = makePreviewDeck(level, isComboOnly, comboActionsRef.current, comboBodyPartsRef.current, drawIndex);
     const revealSteps = [0, 55, 115, 185, 275, 390, 535, 715, 945, 1240];
 
     setIsDrawing(true);
@@ -318,8 +445,8 @@ function GameContent() {
   }, [clearRevealTimers, isComboOnly, playRevealSound]);
 
   useEffect(() => {
-    const storedActions = readStoredList(comboActionsStorageKey, actionDefaults);
-    const storedBodyParts = readStoredList(comboBodyPartsStorageKey, bodyPartDefaults);
+    const storedActions = readStoredList(comboActionsStorageKey, actionDefaults, defaultActionScores);
+    const storedBodyParts = readStoredList(comboBodyPartsStorageKey, bodyPartDefaults, defaultBodyPartScores);
     comboActionsRef.current = storedActions;
     comboBodyPartsRef.current = storedBodyParts;
     setComboActions(storedActions);
@@ -337,13 +464,13 @@ function GameContent() {
   useEffect(() => {
     if (!comboSettingsReady) return;
     comboActionsRef.current = comboActions;
-    window.localStorage.setItem(comboActionsStorageKey, JSON.stringify(comboActions));
+    window.localStorage.setItem(comboActionsStorageKey, JSON.stringify(serializeComboItems(comboActions)));
   }, [comboActions, comboSettingsReady]);
 
   useEffect(() => {
     if (!comboSettingsReady) return;
     comboBodyPartsRef.current = comboBodyParts;
-    window.localStorage.setItem(comboBodyPartsStorageKey, JSON.stringify(comboBodyParts));
+    window.localStorage.setItem(comboBodyPartsStorageKey, JSON.stringify(serializeComboItems(comboBodyParts)));
   }, [comboBodyParts, comboSettingsReady]);
 
   useEffect(() => {
@@ -415,12 +542,16 @@ function GameContent() {
     if (!value) return;
 
     if (kind === "action") {
-      setComboActions((current) => (current.includes(value) ? current : [...current, value]));
+      setComboActions((current) =>
+        current.some((item) => item.label === value) ? current : [...current, { label: value, score: customComboItemScore }]
+      );
       setNewAction("");
       return;
     }
 
-    setComboBodyParts((current) => (current.includes(value) ? current : [...current, value]));
+    setComboBodyParts((current) =>
+      current.some((item) => item.label === value) ? current : [...current, { label: value, score: customComboItemScore }]
+    );
     setNewBodyPart("");
   };
 
@@ -526,7 +657,7 @@ function GameContent() {
               label="動作"
               onAdd={() => addCustomItem("action")}
               onInputChange={setNewAction}
-              onRemove={(item) => setComboActions((current) => current.filter((value) => value !== item))}
+              onRemove={(item) => setComboActions((current) => current.filter((value) => value.label !== item.label))}
               onReset={() => resetComboItems("action")}
               placeholder="新增動作"
             />
@@ -536,7 +667,7 @@ function GameContent() {
               label="身體部位"
               onAdd={() => addCustomItem("bodyPart")}
               onInputChange={setNewBodyPart}
-              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => value !== item))}
+              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => value.label !== item.label))}
               onReset={() => resetComboItems("bodyPart")}
               placeholder="新增身體部位"
             />
@@ -555,6 +686,11 @@ function GameContent() {
                   <span className="rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-gold">
                     {isDrawing ? "揭牌中" : card.type === "combo" ? "限制級" : card.type}
                   </span>
+                  {isComboOnly && typeof card.comboScore === "number" ? (
+                    <span className="rounded-full border border-purple-200/15 bg-purple-950/30 px-3 py-1 text-xs font-medium text-purple-100">
+                      熱度 {card.comboScore}
+                    </span>
+                  ) : null}
                   {card.tags.slice(0, 2).map((tag) => (
                     <span className="rounded-full bg-stone-50/10 px-3 py-1 text-xs text-stone-300" key={tag}>
                       {tag}
@@ -637,11 +773,11 @@ function ComboListEditor({
   placeholder
 }: {
   inputValue: string;
-  items: string[];
+  items: ComboItem[];
   label: string;
   onAdd: () => void;
   onInputChange: (value: string) => void;
-  onRemove: (value: string) => void;
+  onRemove: (value: ComboItem) => void;
   onReset: () => void;
   placeholder: string;
 }) {
@@ -679,11 +815,14 @@ function ComboListEditor({
         {items.map((item) => (
           <span
             className="inline-flex max-w-full items-center gap-2 rounded-full border border-gold/15 bg-black/25 px-3 py-2 text-sm text-stone-200"
-            key={item}
+            key={item.label}
           >
-            <span className="truncate">{item}</span>
+            <span className="truncate">{item.label}</span>
+            <span className="rounded-full bg-gold/10 px-2 py-0.5 text-xs font-semibold text-gold">
+              {item.score}
+            </span>
             <button
-              aria-label={`刪除${item}`}
+              aria-label={`刪除${item.label}`}
               className="text-stone-400 active:text-red-200 disabled:opacity-30"
               disabled={items.length <= 1}
               onClick={() => onRemove(item)}
