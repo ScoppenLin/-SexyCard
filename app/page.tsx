@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Flame, Heart, Sparkles } from "lucide-react";
+import { Flame, Heart, Sparkles, Wand2 } from "lucide-react";
 
 const modes = [
   {
@@ -24,6 +24,13 @@ const modes = [
     subtitle: "大膽邀請，只留給今晚",
     icon: Flame,
     href: "/game?level=3"
+  },
+  {
+    level: "combo",
+    name: "組合牌模式",
+    subtitle: "每一張都即時組合，讓今晚更不可預測",
+    icon: Wand2,
+    href: "/game?mode=combo"
   }
 ];
 
@@ -56,7 +63,10 @@ export default function Home() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-xl font-semibold text-stone-50">
-                    {mode.name} <span className="text-gold">Level {mode.level}</span>
+                    {mode.name}{" "}
+                    <span className="text-gold">
+                      {mode.level === "combo" ? "Combo" : `Level ${mode.level}`}
+                    </span>
                   </span>
                   <span className="mt-1 block text-sm leading-6 text-stone-300">{mode.subtitle}</span>
                 </span>
