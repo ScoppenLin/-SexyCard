@@ -691,58 +691,6 @@ function GameContent() {
           <Stat label="女跳過" value={stats.femaleSkipped} />
         </div>
 
-        <button
-          aria-label={languageMode === "zh-en" ? "切換為只顯示中文" : "切換為中英同時顯示"}
-          className="mb-2 flex min-h-10 items-center justify-center gap-2 rounded-2xl border border-purple-200/15 bg-purple-950/25 px-4 text-sm font-semibold text-purple-100 active:scale-[0.99]"
-          onClick={() => setLanguageMode((current) => (current === "zh-en" ? "zh" : "zh-en"))}
-          title={languageMode === "zh-en" ? "切換為只顯示中文" : "切換為中英同時顯示"}
-          type="button"
-        >
-          <span aria-hidden="true" className="text-base font-semibold">
-            文
-          </span>
-          <span aria-hidden="true" className="text-xs font-semibold text-purple-100/70">
-            {languageMode === "zh-en" ? "A" : "中"}
-          </span>
-        </button>
-
-        {isComboOnly ? (
-          <button
-            aria-label={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
-            className="mb-1 flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-gold/20 bg-stone-950/65 px-4 text-sm font-semibold text-gold active:scale-[0.99]"
-            onClick={() => setIsManagingCombo((current) => !current)}
-            title={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
-            type="button"
-          >
-            {isManagingCombo ? <X aria-hidden="true" size={16} /> : <Settings2 aria-hidden="true" size={16} />}
-          </button>
-        ) : null}
-
-        {isComboOnly && isManagingCombo ? (
-          <section className="mb-3 space-y-3 rounded-2xl border border-gold/18 bg-stone-950/70 p-4">
-            <ComboListEditor
-              inputValue={newAction}
-              items={comboActions}
-              label="動作"
-              onAdd={() => addCustomItem("action")}
-              onInputChange={setNewAction}
-              onRemove={(item) => setComboActions((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
-              onReset={() => resetComboItems("action")}
-              placeholder="新增動作"
-            />
-            <ComboListEditor
-              inputValue={newBodyPart}
-              items={comboBodyParts}
-              label="身體部位"
-              onAdd={() => addCustomItem("bodyPart")}
-              onInputChange={setNewBodyPart}
-              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
-              onReset={() => resetComboItems("bodyPart")}
-              placeholder="新增身體部位"
-            />
-          </section>
-        ) : null}
-
         <article
           className={`my-4 flex flex-1 flex-col justify-between rounded-[1.75rem] border border-gold/25 bg-gradient-to-br from-stone-950 via-plum to-velvet p-6 shadow-card transition duration-200 ${
             isDrawing ? "scale-[1.015] border-gold/45 shadow-[0_0_40px_rgba(200,162,90,0.18)]" : ""
@@ -839,6 +787,61 @@ function GameContent() {
         >
           <Square aria-hidden="true" size={18} />
         </button>
+
+        <div className="flex items-center justify-center gap-2 pb-3 pt-1">
+          <button
+            aria-label={languageMode === "zh-en" ? "切換為只顯示中文" : "切換為中英同時顯示"}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-200/10 bg-purple-950/15 text-purple-100/70 active:scale-[0.98]"
+            onClick={() => setLanguageMode((current) => (current === "zh-en" ? "zh" : "zh-en"))}
+            title={languageMode === "zh-en" ? "切換為只顯示中文" : "切換為中英同時顯示"}
+            type="button"
+          >
+            <span aria-hidden="true" className="text-sm font-semibold leading-none">
+              {languageMode === "zh-en" ? "文/A" : "文"}
+            </span>
+          </button>
+
+          {isComboOnly ? (
+            <button
+              aria-label={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
+              className={`flex h-10 w-10 items-center justify-center rounded-full border active:scale-[0.98] ${
+                isManagingCombo
+                  ? "border-gold/30 bg-gold/15 text-gold"
+                  : "border-gold/10 bg-stone-950/35 text-gold/55"
+              }`}
+              onClick={() => setIsManagingCombo((current) => !current)}
+              title={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
+              type="button"
+            >
+              {isManagingCombo ? <X aria-hidden="true" size={15} /> : <Settings2 aria-hidden="true" size={15} />}
+            </button>
+          ) : null}
+        </div>
+
+        {isComboOnly && isManagingCombo ? (
+          <section className="mb-3 space-y-3 rounded-2xl border border-gold/12 bg-stone-950/50 p-4">
+            <ComboListEditor
+              inputValue={newAction}
+              items={comboActions}
+              label="動作"
+              onAdd={() => addCustomItem("action")}
+              onInputChange={setNewAction}
+              onRemove={(item) => setComboActions((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
+              onReset={() => resetComboItems("action")}
+              placeholder="新增動作"
+            />
+            <ComboListEditor
+              inputValue={newBodyPart}
+              items={comboBodyParts}
+              label="身體部位"
+              onAdd={() => addCustomItem("bodyPart")}
+              onInputChange={setNewBodyPart}
+              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
+              onReset={() => resetComboItems("bodyPart")}
+              placeholder="新增身體部位"
+            />
+          </section>
+        ) : null}
       </section>
     </main>
   );
