@@ -112,18 +112,20 @@ export default function SummaryPage() {
 
         <div className="space-y-3 pb-3">
           <Link
-            className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold to-[#8f6528] px-5 text-base font-semibold text-stone-950 active:scale-[0.99]"
+            aria-label="再玩一局"
+            className="flex min-h-14 items-center justify-center rounded-2xl border border-gold/30 bg-gradient-to-br from-gold to-[#8f6528] px-5 text-base font-semibold text-stone-950 active:scale-[0.99]"
             href={replayHref}
+            title="再玩一局"
           >
-            <RotateCcw aria-hidden="true" size={19} />
-            再玩一局
+            <RotateCcw aria-hidden="true" size={20} />
           </Link>
           <Link
-            className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-gold/15 bg-stone-950/65 px-5 text-base font-semibold text-stone-100 active:scale-[0.99]"
+            aria-label="回首頁"
+            className="flex min-h-14 items-center justify-center rounded-2xl border border-gold/15 bg-stone-950/65 px-5 text-base font-semibold text-stone-100 active:scale-[0.99]"
             href="/"
+            title="回首頁"
           >
-            <Home aria-hidden="true" size={19} />
-            回首頁
+            <Home aria-hidden="true" size={20} />
           </Link>
         </div>
       </section>
