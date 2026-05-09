@@ -1,15 +1,145 @@
 [
-  { "label": { "zh": "用指尖慢慢描過", "en": "Slowly trace with your fingertips over " }, "score": 2 },
-  { "label": { "zh": "臉頰靠近停留", "en": "Bring your cheek close and linger near " }, "score": 2 },
-  { "label": { "zh": "手掌輕輕按揉", "en": "Gently massage with your palm on " }, "score": 3 },
-  { "label": { "zh": "給一個很慢的吻在", "en": "Give one very slow kiss on " }, "score": 4 },
-  { "label": { "zh": "用手軸去碰觸", "en": "Touch lightly with your forearm against " }, "score": 5 },
-  { "label": { "zh": "用鼻尖輕輕滑過", "en": "Brush softly with the tip of your nose over " }, "score": 4 },
-  { "label": { "zh": "用龜頭/奶頭 輕輕滑過", "en": "Glide your tip or nipple softly over " }, "score": 9 },
-  { "label": { "zh": "用腳指頭去碰", "en": "Touch with your toes against " }, "score": 5 },
-  { "label": { "zh": "用額頭去碰", "en": "Touch with your forehead against " }, "score": 4 },
-  { "label": { "zh": "用下巴去戳", "en": "Nudge gently with your chin against " }, "score": 5 },
-  { "label": { "zh": "用小指去磨", "en": "Tease slowly with your little finger on " }, "score": 6 },
-  { "label": { "zh": "用中指指去壓", "en": "Press gently with your middle finger on " }, "score": 7 },
-  { "label": { "zh": "用舌頭舔", "en": "Lick slowly over " }, "score": 8 }
+  {
+    "label": {
+      "zh": "用指尖慢慢描過",
+      "en": "Slowly trace with your fingertips over ",
+      "id": "Usap perlahan dengan ujung jari di ",
+      "vi": "Dùng đầu ngón tay chậm rãi lướt trên ",
+      "ja": "指先でゆっくりなぞる場所：",
+      "ko": "손끝으로 천천히 쓸어줄 곳: "
+    },
+    "score": 2
+  },
+  {
+    "label": {
+      "zh": "臉頰靠近停留",
+      "en": "Bring your cheek close and linger near ",
+      "id": "Dekatkan pipimu dan berhenti sejenak di dekat ",
+      "vi": "Đưa má lại gần và dừng bên ",
+      "ja": "頬を近づけて止まる場所：",
+      "ko": "볼을 가까이 대고 머무를 곳: "
+    },
+    "score": 2
+  },
+  {
+    "label": {
+      "zh": "手掌輕輕按揉",
+      "en": "Gently massage with your palm on ",
+      "id": "Pijat lembut dengan telapak tangan di ",
+      "vi": "Dùng lòng bàn tay xoa nhẹ lên ",
+      "ja": "手のひらでやさしく揉む場所：",
+      "ko": "손바닥으로 부드럽게 문질러 줄 곳: "
+    },
+    "score": 3
+  },
+  {
+    "label": {
+      "zh": "給一個很慢的吻在",
+      "en": "Give one very slow kiss on ",
+      "id": "Berikan satu ciuman sangat pelan di ",
+      "vi": "Đặt một nụ hôn thật chậm lên ",
+      "ja": "とてもゆっくりキスする場所：",
+      "ko": "아주 느린 입맞춤을 할 곳: "
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "用手肘去碰觸",
+      "en": "Touch lightly with your forearm against ",
+      "id": "Sentuh ringan dengan lengan bawah ke ",
+      "vi": "Dùng cẳng tay chạm nhẹ vào ",
+      "ja": "前腕で軽く触れる場所：",
+      "ko": "팔뚝으로 가볍게 닿을 곳: "
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "用鼻尖輕輕滑過",
+      "en": "Brush softly with the tip of your nose over ",
+      "id": "Sapu lembut dengan ujung hidung di ",
+      "vi": "Dùng chóp mũi lướt nhẹ qua ",
+      "ja": "鼻先でそっと滑らせる場所：",
+      "ko": "코끝으로 부드럽게 스칠 곳: "
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "用龜頭/奶头 輕輕滑過",
+      "en": "Glide your tip or nipple softly over ",
+      "id": "Geser lembut ujung tubuh atau putingmu di ",
+      "vi": "Dùng đầu nhạy cảm hoặc núm vú lướt nhẹ qua ",
+      "ja": "敏感な先端や乳首でそっと滑らせる場所：",
+      "ko": "민감한 끝이나 젖꼭지로 부드럽게 스칠 곳: "
+    },
+    "score": 9
+  },
+  {
+    "label": {
+      "zh": "用腳指頭去碰",
+      "en": "Touch with your toes against ",
+      "id": "Sentuh dengan jari kaki ke ",
+      "vi": "Dùng ngón chân chạm vào ",
+      "ja": "つま先で触れる場所：",
+      "ko": "발가락으로 닿을 곳: "
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "用額頭去碰",
+      "en": "Touch with your forehead against ",
+      "id": "Sentuh dengan dahi ke ",
+      "vi": "Dùng trán chạm vào ",
+      "ja": "額で触れる場所：",
+      "ko": "이마로 닿을 곳: "
+    },
+    "score": 4
+  },
+  {
+    "label": {
+      "zh": "用下巴去戳",
+      "en": "Nudge gently with your chin against ",
+      "id": "Dorong lembut dengan dagu ke ",
+      "vi": "Dùng cằm chạm nhẹ vào ",
+      "ja": "あごで軽く押す場所：",
+      "ko": "턱으로 살짝 밀어볼 곳: "
+    },
+    "score": 5
+  },
+  {
+    "label": {
+      "zh": "用小指去磨",
+      "en": "Tease slowly with your little finger on ",
+      "id": "Godakan perlahan dengan kelingking di ",
+      "vi": "Dùng ngón út trêu nhẹ trên ",
+      "ja": "小指でゆっくり焦らす場所：",
+      "ko": "새끼손가락으로 천천히 간질일 곳: "
+    },
+    "score": 6
+  },
+  {
+    "label": {
+      "zh": "用中指指去壓",
+      "en": "Press gently with your middle finger on ",
+      "id": "Tekan lembut dengan jari tengah di ",
+      "vi": "Dùng ngón giữa ấn nhẹ lên ",
+      "ja": "中指でやさしく押す場所：",
+      "ko": "중지로 부드럽게 눌러볼 곳: "
+    },
+    "score": 7
+  },
+  {
+    "label": {
+      "zh": "用舌頭舔",
+      "en": "Lick slowly over ",
+      "id": "Jilat perlahan di ",
+      "vi": "Dùng lưỡi liếm chậm trên ",
+      "ja": "舌でゆっくり触れる場所：",
+      "ko": "혀로 천천히 핥아볼 곳: "
+    },
+    "score": 8
+  }
 ]
