@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: #08060a;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(122, 31, 61, 0.32), transparent 34rem),
+    radial-gradient(circle at 92% 18%, rgba(82, 43, 105, 0.26), transparent 28rem),
+    linear-gradient(160deg, #08060a 0%, #150b15 46%, #241020 100%);
+  color: #fff7ed;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.safe-screen {
+  min-height: 100svh;
+}
