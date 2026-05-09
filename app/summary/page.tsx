@@ -6,22 +6,52 @@ import { Home, RotateCcw } from "lucide-react";
 
 type GameStats = {
   level: 1 | 2 | 3;
+  mode?: "level" | "combo";
   totalDraws: number;
-  completed: number;
-  skipped: number;
-  swapped: number;
+  maleCompleted: number;
+  femaleCompleted: number;
+  maleSkipped: number;
+  femaleSkipped: number;
   startedAt: string;
   endedAt?: string;
 };
 
 const fallbackStats: GameStats = {
   level: 1,
+  mode: "level",
   totalDraws: 0,
-  completed: 0,
-  skipped: 0,
-  swapped: 0,
+  maleCompleted: 0,
+  femaleCompleted: 0,
+  maleSkipped: 0,
+  femaleSkipped: 0,
   startedAt: new Date().toISOString()
 };
+
+function normalizeStats(value: unknown): GameStats {
+  if (!value || typeof value !== "object") return fallbackStats;
+
+  const stats = value as Partial<GameStats> & {
+    completed?: number;
+    skipped?: number;
+  };
+
+  const maleCompleted = stats.maleCompleted ?? stats.completed ?? 0;
+  const femaleCompleted = stats.femaleCompleted ?? 0;
+  const maleSkipped = stats.maleSkipped ?? stats.skipped ?? 0;
+  const femaleSkipped = stats.femaleSkipped ?? 0;
+
+  return {
+    level: stats.level === 2 || stats.level === 3 ? stats.level : 1,
+    mode: stats.mode === "combo" ? "combo" : "level",
+    totalDraws: stats.totalDraws ?? 0,
+    maleCompleted,
+    femaleCompleted,
+    maleSkipped,
+    femaleSkipped,
+    startedAt: stats.startedAt ?? new Date().toISOString(),
+    endedAt: stats.endedAt
+  };
+}
 
 export default function SummaryPage() {
   const [stats, setStats] = useState<GameStats>(fallbackStats);
@@ -31,17 +61,21 @@ export default function SummaryPage() {
     if (!saved) return;
 
     try {
-      setStats(JSON.parse(saved) as GameStats);
+      setStats(normalizeStats(JSON.parse(saved)));
     } catch {
       setStats(fallbackStats);
     }
   }, []);
 
+  const completed = stats.maleCompleted + stats.femaleCompleted;
+  const skipped = stats.maleSkipped + stats.femaleSkipped;
+  const replayHref = stats.mode === "combo" ? "/game?mode=combo" : `/game?level=${stats.level}`;
+
   const completionRate = useMemo(() => {
-    const decided = stats.completed + stats.skipped;
+    const decided = completed + skipped;
     if (decided === 0) return 0;
-    return Math.round((stats.completed / decided) * 100);
-  }, [stats.completed, stats.skipped]);
+    return Math.round((completed / decided) * 100);
+  }, [completed, skipped]);
 
   return (
     <main className="safe-screen px-5 py-6">
@@ -57,9 +91,12 @@ export default function SummaryPage() {
         <div className="my-8 rounded-[1.75rem] border border-gold/25 bg-stone-950/65 p-5 shadow-card backdrop-blur">
           <div className="grid grid-cols-2 gap-3">
             <SummaryStat label="總抽卡數" value={stats.totalDraws} />
-            <SummaryStat label="完成數" value={stats.completed} />
-            <SummaryStat label="跳過數" value={stats.skipped} />
-            <SummaryStat label="換牌數" value={stats.swapped} />
+            <SummaryStat label="完成數" value={completed} />
+            <SummaryStat label="跳過數" value={skipped} />
+            <SummaryStat label="男生完成" value={stats.maleCompleted} />
+            <SummaryStat label="女生完成" value={stats.femaleCompleted} />
+            <SummaryStat label="男生跳過" value={stats.maleSkipped} />
+            <SummaryStat label="女生跳過" value={stats.femaleSkipped} />
           </div>
           <div className="mt-4 rounded-2xl border border-gold/20 bg-gradient-to-br from-wine/50 to-plum/70 p-5">
             <p className="text-sm text-stone-300">完成率</p>
@@ -76,7 +113,7 @@ export default function SummaryPage() {
         <div className="space-y-3 pb-3">
           <Link
             className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold to-[#8f6528] px-5 text-base font-semibold text-stone-950 active:scale-[0.99]"
-            href={`/game?level=${stats.level}`}
+            href={replayHref}
           >
             <RotateCcw aria-hidden="true" size={19} />
             再玩一局
