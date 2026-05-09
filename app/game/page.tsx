@@ -20,10 +20,19 @@ import {
 import cardsData from "@/data/cards.json";
 import defaultActions from "@/data/actions.json";
 import defaultBodyParts from "@/data/bodyParts.json";
-import durations from "@/data/durations.json";
-import cardTranslationsData from "@/data/cardTranslations.json";
+import durationsData from "@/data/durations.json";
+import cardTranslationsEnData from "@/data/cardTranslations.json";
+import cardTranslationsIdData from "@/data/cardTranslations.id.json";
+import cardTranslationsJaData from "@/data/cardTranslations.ja.json";
+import cardTranslationsKoData from "@/data/cardTranslations.ko.json";
+import cardTranslationsViData from "@/data/cardTranslations.vi.json";
 
 type Level = 1 | 2 | 3;
+type Lang = "en" | "id" | "vi" | "ja" | "ko";
+type AppLang = "zh" | Lang;
+type LocalizedText = string | { zh: string; en?: string; id?: string; vi?: string; ja?: string; ko?: string };
+type ComboItem = { label: LocalizedText; score: number };
+type TranslationText = { title: string; text: string };
 
 type Card = {
   id: string;
@@ -37,9 +46,7 @@ type Card = {
 
 type DisplayCard = Card & {
   displayText: string;
-  displayTextEn?: string;
-  titleEn?: string;
-  comboText?: string;
+  translations: Partial<Record<Lang, TranslationText>>;
   comboScore?: number;
 };
 
@@ -55,28 +62,14 @@ type GameStats = {
   endedAt?: string;
 };
 
-const cards = cardsData as unknown as Card[];
+type TimerAudioContext = AudioContext & { webkitAudioContext?: never };
+
+const cards = cardsData as Card[];
 const comboActionsStorageKey = "velvetCards.comboActions";
 const comboBodyPartsStorageKey = "velvetCards.comboBodyParts";
-type TimerAudioContext = AudioContext & { webkitAudioContext?: never };
-type LocalizedText = string | {
-  zh: string;
-  en?: string;
-  [language: string]: string | undefined;
-};
-
-type ComboItem = {
-  label: LocalizedText;
-  score: number;
-};
-type LanguageMode = "zh" | "zh-en";
-type CardTranslation = {
-  title: string;
-  text: string;
-};
-
+const selectedLanguagesStorageKey = "velvetCards.selectedLanguages";
+const legacyLanguageModeStorageKey = "velvetCards.languageMode";
 const customComboItemScore = 5;
-const languageModeStorageKey = "velvetCards.languageMode";
 
 const levelNames: Record<Level, string> = {
   1: "暖身模式",
@@ -84,7 +77,21 @@ const levelNames: Record<Level, string> = {
   3: "火辣模式"
 };
 
-const cardTranslations = cardTranslationsData as Record<string, CardTranslation>;
+const languageOptions: { code: Lang; label: string; shortLabel: string }[] = [
+  { code: "en", label: "English", shortLabel: "EN" },
+  { code: "id", label: "Indonesia", shortLabel: "ID" },
+  { code: "vi", label: "Tiếng Việt", shortLabel: "VI" },
+  { code: "ja", label: "日本語", shortLabel: "日" },
+  { code: "ko", label: "한국어", shortLabel: "韓" }
+];
+const languageCodes = new Set<Lang>(languageOptions.map((language) => language.code));
+const cardTranslationsByLanguage: Record<Lang, Record<string, TranslationText>> = {
+  en: cardTranslationsEnData as Record<string, TranslationText>,
+  id: cardTranslationsIdData as Record<string, TranslationText>,
+  vi: cardTranslationsViData as Record<string, TranslationText>,
+  ja: cardTranslationsJaData as Record<string, TranslationText>,
+  ko: cardTranslationsKoData as Record<string, TranslationText>
+};
 
 const chineseNumbers: Record<string, number> = {
   一: 1,
@@ -109,21 +116,13 @@ function clampScore(value: unknown): number {
   return Math.min(10, Math.max(1, Math.round(value)));
 }
 
-function localizedText(value: LocalizedText, language: "zh" | "en" = "zh"): string {
-  if (typeof value === "string") return language === "zh" ? value : "";
-  return value[language] ?? value.zh ?? "";
+function localizedText(value: LocalizedText, language: AppLang = "zh"): string {
+  if (typeof value === "string") return value;
+  return value[language] ?? value.zh ?? value.en ?? "";
 }
 
 function comboLabelKey(item: ComboItem): string {
   return localizedText(item.label, "zh") || localizedText(item.label, "en");
-}
-
-function readLanguageMode(): LanguageMode {
-  try {
-    return window.localStorage.getItem(languageModeStorageKey) === "zh" ? "zh" : "zh-en";
-  } catch {
-    return "zh-en";
-  }
 }
 
 function normalizeDefaultItems(value: unknown, fallbackScore = customComboItemScore): ComboItem[] {
@@ -135,35 +134,43 @@ function normalizeDefaultItems(value: unknown, fallbackScore = customComboItemSc
         const label = item.trim();
         return label ? { label, score: fallbackScore } : null;
       }
+      if (typeof item !== "object" || item === null) return null;
 
-      if (typeof item === "object" && item !== null) {
-        const record = item as { label?: unknown; text?: unknown; score?: unknown };
-        const rawLabel = record.label ?? record.text ?? "";
+      const record = item as { label?: unknown; text?: unknown; score?: unknown };
+      const rawLabel = record.label ?? record.text ?? "";
+      if (typeof rawLabel === "object" && rawLabel !== null) {
+        const label = rawLabel as Partial<Record<AppLang, unknown>>;
+        const zh = String(label.zh ?? label.en ?? "").trim();
+        if (!zh) return null;
 
-        if (typeof rawLabel === "object" && rawLabel !== null) {
-          const labelRecord = rawLabel as { zh?: unknown; en?: unknown };
-          const zh = String(labelRecord.zh ?? "").trim();
-          const en = String(labelRecord.en ?? "").trim();
-
-          return zh || en ? { label: { zh: zh || en, en: en || undefined }, score: clampScore(record.score) } : null;
-        }
-
-        const label = String(rawLabel).trim();
-        return label ? { label, score: clampScore(record.score) } : null;
+        return {
+          label: {
+            zh,
+            en: String(label.en ?? "").trim() || undefined,
+            id: String(label.id ?? "").trim() || undefined,
+            vi: String(label.vi ?? "").trim() || undefined,
+            ja: String(label.ja ?? "").trim() || undefined,
+            ko: String(label.ko ?? "").trim() || undefined
+          },
+          score: clampScore(record.score)
+        };
       }
 
-      return null;
+      const label = String(rawLabel).trim();
+      return label ? { label, score: clampScore(record.score ?? fallbackScore) } : null;
     })
     .filter((item): item is ComboItem => item !== null);
 }
 
 const actionDefaults = normalizeDefaultItems(defaultActions);
 const bodyPartDefaults = normalizeDefaultItems(defaultBodyParts);
-const durationDefaults = normalizeDefaultItems(durations, 3);
+const durationDefaults = normalizeDefaultItems(durationsData, 3);
 
 function itemFromLabel(label: string, defaults: ComboItem[]): ComboItem {
-  const defaultItem = defaults.find((item) => comboLabelKey(item) === label || localizedText(item.label, "en") === label);
-  return defaultItem ?? { label, score: customComboItemScore };
+  return defaults.find((item) => comboLabelKey(item) === label || localizedText(item.label, "en") === label) ?? {
+    label,
+    score: customComboItemScore
+  };
 }
 
 function normalizeCustomList(value: unknown, fallback: ComboItem[]): ComboItem[] {
@@ -175,42 +182,37 @@ function normalizeCustomList(value: unknown, fallback: ComboItem[]): ComboItem[]
         const label = item.trim();
         return label ? itemFromLabel(label, fallback) : null;
       }
+      if (typeof item !== "object" || item === null || !("label" in item)) return null;
 
-      if (typeof item === "object" && item !== null && "label" in item) {
-        const rawLabel = (item as { label?: unknown }).label;
-        const label = typeof rawLabel === "object" && rawLabel !== null
-          ? String((rawLabel as { zh?: unknown; en?: unknown }).zh ?? (rawLabel as { en?: unknown }).en ?? "").trim()
-          : String(rawLabel ?? "").trim();
-        if (!label) return null;
+      const rawLabel = (item as { label?: unknown }).label;
+      const label = typeof rawLabel === "object" && rawLabel !== null
+        ? String((rawLabel as { zh?: unknown; en?: unknown }).zh ?? (rawLabel as { en?: unknown }).en ?? "").trim()
+        : String(rawLabel ?? "").trim();
+      if (!label) return null;
 
-        const defaultItem = fallback.find((candidate) => comboLabelKey(candidate) === label);
-        if (defaultItem) return defaultItem;
-
-        if (typeof rawLabel === "object" && rawLabel !== null) {
-          const labelRecord = rawLabel as { zh?: unknown; en?: unknown };
-          return {
-            label: {
-              zh: String(labelRecord.zh ?? labelRecord.en ?? "").trim(),
-              en: String(labelRecord.en ?? "").trim() || undefined
-            },
-            score: clampScore((item as { score?: unknown }).score)
-          };
-        }
-
-        return { label, score: clampScore((item as { score?: unknown }).score) };
+      const defaultItem = fallback.find((candidate) => comboLabelKey(candidate) === label);
+      if (defaultItem) return defaultItem;
+      if (typeof rawLabel === "object" && rawLabel !== null) {
+        const record = rawLabel as Partial<Record<AppLang, unknown>>;
+        return {
+          label: {
+            zh: String(record.zh ?? record.en ?? "").trim(),
+            en: String(record.en ?? "").trim() || undefined,
+            id: String(record.id ?? "").trim() || undefined,
+            vi: String(record.vi ?? "").trim() || undefined,
+            ja: String(record.ja ?? "").trim() || undefined,
+            ko: String(record.ko ?? "").trim() || undefined
+          },
+          score: clampScore((item as { score?: unknown }).score)
+        };
       }
 
-      return null;
+      return { label, score: clampScore((item as { score?: unknown }).score) };
     })
     .filter((item): item is ComboItem => item !== null);
 
   const deduped = Array.from(new Map(normalized.map((item) => [comboLabelKey(item), item])).values());
-
   return deduped.length ? deduped : fallback;
-}
-
-function serializeComboItems(items: ComboItem[]): ComboItem[] {
-  return items.map((item) => ({ label: item.label, score: item.score }));
 }
 
 function readStoredList(key: string, fallback: ComboItem[]): ComboItem[] {
@@ -221,12 +223,36 @@ function readStoredList(key: string, fallback: ComboItem[]): ComboItem[] {
   }
 }
 
-function pickProgressiveComboParts(actions: ComboItem[], bodyParts: ComboItem[], durationOptions: ComboItem[], drawIndex: number) {
+function readSelectedLanguages(): Lang[] {
+  try {
+    const stored = window.localStorage.getItem(selectedLanguagesStorageKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed)
+        ? parsed.filter((language): language is Lang => languageCodes.has(language as Lang)).slice(0, 2)
+        : ["en"];
+    }
+
+    return window.localStorage.getItem(legacyLanguageModeStorageKey) === "zh" ? [] : ["en"];
+  } catch {
+    return ["en"];
+  }
+}
+
+function translationsFor(cardId: string): Partial<Record<Lang, TranslationText>> {
+  return Object.fromEntries(
+    languageOptions
+      .map(({ code }) => [code, cardTranslationsByLanguage[code][cardId]] as const)
+      .filter((entry): entry is [Lang, TranslationText] => Boolean(entry[1]))
+  );
+}
+
+function pickProgressiveComboParts(actions: ComboItem[], bodyParts: ComboItem[], durations: ComboItem[], drawIndex: number) {
   const climb = Math.min(18, drawIndex * 0.75);
   const targetScore = 8 + climb + (Math.random() * 7 - 3.5);
   const combinations = actions.flatMap((action) =>
     bodyParts.flatMap((bodyPart) =>
-      durationOptions.map((duration) => ({
+      durations.map((duration) => ({
         action,
         bodyPart,
         duration,
@@ -234,38 +260,44 @@ function pickProgressiveComboParts(actions: ComboItem[], bodyParts: ComboItem[],
       }))
     )
   );
-  const weightedCombinations = combinations.map((combination) => {
+  const weighted = combinations.map((combination) => {
     const distance = Math.abs(combination.score - targetScore);
     const surpriseBonus = Math.random() < 0.16 ? 2.6 : 1;
     const highScoreLift = 1 + Math.max(0, combination.score - 10) * 0.03;
-
-    return {
-      combination,
-      weight: (1 / Math.pow(distance + 1, 1.75)) * surpriseBonus * highScoreLift
-    };
+    return { combination, weight: (1 / Math.pow(distance + 1, 1.75)) * surpriseBonus * highScoreLift };
   });
-  const totalWeight = weightedCombinations.reduce((sum, item) => sum + item.weight, 0);
+  const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
   let cursor = Math.random() * totalWeight;
 
-  for (const item of weightedCombinations) {
+  for (const item of weighted) {
     cursor -= item.weight;
     if (cursor <= 0) return item.combination;
   }
 
-  return weightedCombinations[weightedCombinations.length - 1].combination;
+  return weighted[weighted.length - 1].combination;
 }
 
-function buildDisplayCard(
-  card: Card,
-  comboActions = actionDefaults,
-  comboBodyParts = bodyPartDefaults,
-  drawIndex = 0
-): DisplayCard {
-  const translation = cardTranslations[card.id];
+function durationPhrase(language: AppLang, duration: string): string {
+  if (language === "zh") return `持續 ${duration}`;
+  if (language === "en") return duration.startsWith("until") ? duration : `for ${duration}`;
+  if (language === "id") return duration.startsWith("sampai") ? duration : `selama ${duration}`;
+  if (language === "vi") return duration.startsWith("đến") ? duration : `trong ${duration}`;
+  if (language === "ja") return `${duration}続けてください`;
+  return duration.includes("까지") ? duration : `${duration} 동안`;
+}
 
-  if (card.type !== "combo") {
-    return { ...card, displayText: card.text, displayTextEn: translation?.text, titleEn: translation?.title };
-  }
+function comboText(action: ComboItem, bodyPart: ComboItem, duration: ComboItem, language: AppLang): string {
+  const actionText = localizedText(action.label, language);
+  const bodyPartText = localizedText(bodyPart.label, language);
+  const durationText = localizedText(duration.label, language);
+  if (language === "zh") return `${actionText}${bodyPartText}，${durationPhrase(language, durationText)}。`;
+  if (language === "ja") return `${actionText}${bodyPartText}。${durationPhrase(language, durationText)}。`;
+  return `${actionText}${bodyPartText} ${durationPhrase(language, durationText)}.`;
+}
+
+function buildDisplayCard(card: Card, comboActions = actionDefaults, comboBodyParts = bodyPartDefaults, drawIndex = 0): DisplayCard {
+  const translations = translationsFor(card.id);
+  if (card.type !== "combo") return { ...card, displayText: card.text, translations };
 
   const { action, bodyPart, duration, score } = pickProgressiveComboParts(
     comboActions,
@@ -273,18 +305,19 @@ function buildDisplayCard(
     durationDefaults,
     drawIndex
   );
-  const comboText = `${localizedText(action.label)}${localizedText(bodyPart.label)}，持續 ${localizedText(duration.label)}。`;
-  const comboTextEn = `${localizedText(action.label, "en")}${localizedText(bodyPart.label, "en")} for ${localizedText(
-    duration.label,
-    "en"
-  )}.`;
 
   return {
     ...card,
-    displayText: comboText,
-    displayTextEn: comboTextEn,
-    titleEn: translation?.title,
-    comboText,
+    displayText: comboText(action, bodyPart, duration, "zh"),
+    translations: Object.fromEntries(
+      languageOptions.map(({ code }) => [
+        code,
+        {
+          title: translations[code]?.title ?? "",
+          text: comboText(action, bodyPart, duration, code)
+        }
+      ])
+    ) as Partial<Record<Lang, TranslationText>>,
     comboScore: score
   };
 }
@@ -295,18 +328,17 @@ function drawCard(level: Level, previousId?: string): DisplayCard {
   return buildDisplayCard(randomItem(candidates));
 }
 
-function drawComboCard(comboActions: ComboItem[], comboBodyParts: ComboItem[], drawIndex: number, previousId?: string): DisplayCard {
+function drawComboCard(actions: ComboItem[], bodyParts: ComboItem[], drawIndex: number, previousId?: string): DisplayCard {
   const pool = cards.filter((card) => card.type === "combo");
   const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
-  return buildDisplayCard(randomItem(candidates), comboActions, comboBodyParts, drawIndex);
+  return buildDisplayCard(randomItem(candidates), actions, bodyParts, drawIndex);
 }
 
-function makePreviewDeck(level: Level, isComboOnly: boolean, comboActions: ComboItem[], comboBodyParts: ComboItem[], drawIndex = 0): DisplayCard[] {
+function makePreviewDeck(level: Level, isComboOnly: boolean, actions: ComboItem[], bodyParts: ComboItem[], drawIndex = 0) {
   const pool = isComboOnly
-    ? cards.filter((previewCard) => previewCard.type === "combo")
-    : cards.filter((previewCard) => previewCard.level === level && previewCard.type !== "combo");
-
-  return pool.map((previewCard, index) => buildDisplayCard(previewCard, comboActions, comboBodyParts, drawIndex + index));
+    ? cards.filter((card) => card.type === "combo")
+    : cards.filter((card) => card.level === level && card.type !== "combo");
+  return pool.map((card, index) => buildDisplayCard(card, actions, bodyParts, drawIndex + index));
 }
 
 function normalizeLevel(value: string | null): Level {
@@ -330,11 +362,8 @@ function parseTimeValue(value: string): number | null {
 function parseTimerSeconds(text: string): number | null {
   const match = text.match(/(\d+|[一二兩三四五六七八九十]{1,3})\s*(秒|分鐘)/);
   if (!match) return null;
-
   const amount = parseTimeValue(match[1]);
-  if (!amount) return null;
-
-  return match[2] === "分鐘" ? amount * 60 : amount;
+  return amount ? (match[2] === "分鐘" ? amount * 60 : amount) : null;
 }
 
 function formatTime(totalSeconds: number): string {
@@ -343,20 +372,18 @@ function formatTime(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function createTimerAudioContext(): TimerAudioContext | null {
+function createAudioContext(): TimerAudioContext | null {
   const AudioContextClass =
     window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) return null;
-
-  return new AudioContextClass() as TimerAudioContext;
+  return AudioContextClass ? (new AudioContextClass() as TimerAudioContext) : null;
 }
 
 function playTimerSound(audio: AudioContext, kind: "start" | "end", startAt = audio.currentTime): OscillatorNode[] {
   const gain = audio.createGain();
-  gain.connect(audio.destination);
   const nodes: OscillatorNode[] = [];
+  gain.connect(audio.destination);
 
-  const playTone = (frequency: number, start: number, duration: number) => {
+  const tone = (frequency: number, start: number, duration: number) => {
     const oscillator = audio.createOscillator();
     oscillator.type = "triangle";
     oscillator.frequency.setValueAtTime(frequency, start);
@@ -369,13 +396,10 @@ function playTimerSound(audio: AudioContext, kind: "start" | "end", startAt = au
   gain.gain.setValueAtTime(0.0001, startAt);
   gain.gain.exponentialRampToValueAtTime(0.32, startAt + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + (kind === "start" ? 0.22 : 0.72));
-
-  if (kind === "start") {
-    playTone(660, startAt, 0.18);
-  } else {
-    playTone(660, startAt, 0.18);
-    playTone(880, startAt + 0.2, 0.2);
-    playTone(1046, startAt + 0.42, 0.24);
+  tone(660, startAt, 0.18);
+  if (kind === "end") {
+    tone(880, startAt + 0.2, 0.2);
+    tone(1046, startAt + 0.42, 0.24);
   }
 
   return nodes;
@@ -385,17 +409,12 @@ function playDrawSound(audio: AudioContext, kind: "tick" | "settle") {
   const now = audio.currentTime;
   const gain = audio.createGain();
   const oscillator = audio.createOscillator();
-
   oscillator.type = "triangle";
   oscillator.frequency.setValueAtTime(kind === "tick" ? 520 : 880, now);
-  if (kind === "settle") {
-    oscillator.frequency.exponentialRampToValueAtTime(1180, now + 0.18);
-  }
-
+  if (kind === "settle") oscillator.frequency.exponentialRampToValueAtTime(1180, now + 0.18);
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.exponentialRampToValueAtTime(kind === "tick" ? 0.08 : 0.16, now + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "tick" ? 0.08 : 0.28));
-
   oscillator.connect(gain);
   gain.connect(audio.destination);
   oscillator.start(now);
@@ -423,11 +442,12 @@ function GameContent() {
   const comboBodyPartsRef = useRef(bodyPartDefaults);
   const statsRef = useRef<GameStats | null>(null);
   const hasPulledInitialCardRef = useRef(false);
-  const [comboSettingsReady, setComboSettingsReady] = useState(false);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [isManagingCombo, setIsManagingCombo] = useState(false);
+  const [isLanguagePanelOpen, setIsLanguagePanelOpen] = useState(false);
   const [newAction, setNewAction] = useState("");
   const [newBodyPart, setNewBodyPart] = useState("");
-  const [languageMode, setLanguageMode] = useState<LanguageMode>("zh-en");
+  const [selectedLanguages, setSelectedLanguages] = useState<Lang[]>(["en"]);
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
     mode: isComboOnly ? "combo" : "level",
@@ -446,13 +466,9 @@ function GameContent() {
   }, []);
 
   const playRevealSound = useCallback((kind: "tick" | "settle") => {
-    if (!drawAudioRef.current || drawAudioRef.current.state === "closed") {
-      drawAudioRef.current = createTimerAudioContext();
-    }
-
+    if (!drawAudioRef.current || drawAudioRef.current.state === "closed") drawAudioRef.current = createAudioContext();
     const audio = drawAudioRef.current;
     if (!audio) return;
-
     void audio.resume().then(() => playDrawSound(audio, kind)).catch(() => undefined);
   }, []);
 
@@ -463,13 +479,11 @@ function GameContent() {
       ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, drawIndex, previousId)
       : drawCard(level, previousId);
     const previewDeck = makePreviewDeck(level, isComboOnly, comboActionsRef.current, comboBodyPartsRef.current, drawIndex);
-    const revealSteps = [0, 55, 115, 185, 275, 390, 535, 715, 945, 1240];
 
     setIsDrawing(true);
     setIsTimerRunning(false);
     setRemainingSeconds(null);
-
-    revealSteps.forEach((delay) => {
+    [0, 55, 115, 185, 275, 390, 535, 715, 945, 1240].forEach((delay) => {
       const timeoutId = window.setTimeout(() => {
         setCard(randomItem(previewDeck));
         playRevealSound("tick");
@@ -479,12 +493,7 @@ function GameContent() {
 
     const finalTimeoutId = window.setTimeout(() => {
       setCard(nextCard);
-      setStats((current) => ({
-        ...current,
-        level,
-        mode: isComboOnly ? "combo" : "level",
-        totalDraws: current.totalDraws + 1
-      }));
+      setStats((current) => ({ ...current, level, mode: isComboOnly ? "combo" : "level", totalDraws: current.totalDraws + 1 }));
       setIsDrawing(false);
       playRevealSound("settle");
       revealTimeoutsRef.current = [];
@@ -499,32 +508,31 @@ function GameContent() {
     comboBodyPartsRef.current = storedBodyParts;
     setComboActions(storedActions);
     setComboBodyParts(storedBodyParts);
-    setLanguageMode(readLanguageMode());
-    setComboSettingsReady(true);
+    setSelectedLanguages(readSelectedLanguages());
+    setSettingsReady(true);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(languageModeStorageKey, languageMode);
-  }, [languageMode]);
+    window.localStorage.setItem(selectedLanguagesStorageKey, JSON.stringify(selectedLanguages));
+  }, [selectedLanguages]);
 
   useEffect(() => {
-    if (hasPulledInitialCardRef.current) return;
-    if (isComboOnly && !comboSettingsReady) return;
+    if (hasPulledInitialCardRef.current || (isComboOnly && !settingsReady)) return;
     hasPulledInitialCardRef.current = true;
     pullCard(initialLevel);
-  }, [comboSettingsReady, initialLevel, isComboOnly, pullCard]);
+  }, [initialLevel, isComboOnly, pullCard, settingsReady]);
 
   useEffect(() => {
-    if (!comboSettingsReady) return;
+    if (!settingsReady) return;
     comboActionsRef.current = comboActions;
-    window.localStorage.setItem(comboActionsStorageKey, JSON.stringify(serializeComboItems(comboActions)));
-  }, [comboActions, comboSettingsReady]);
+    window.localStorage.setItem(comboActionsStorageKey, JSON.stringify(comboActions));
+  }, [comboActions, settingsReady]);
 
   useEffect(() => {
-    if (!comboSettingsReady) return;
+    if (!settingsReady) return;
     comboBodyPartsRef.current = comboBodyParts;
-    window.localStorage.setItem(comboBodyPartsStorageKey, JSON.stringify(serializeComboItems(comboBodyParts)));
-  }, [comboBodyParts, comboSettingsReady]);
+    window.localStorage.setItem(comboBodyPartsStorageKey, JSON.stringify(comboBodyParts));
+  }, [comboBodyParts, settingsReady]);
 
   useEffect(() => {
     window.localStorage.setItem("velvetCards.currentGame", JSON.stringify(stats));
@@ -545,16 +553,13 @@ function GameContent() {
 
   useEffect(() => {
     if (!isTimerRunning || remainingSeconds === null) return;
-
     if (remainingSeconds <= 0) {
       setIsTimerRunning(false);
       return;
     }
-
     const timerId = window.setTimeout(() => {
       setRemainingSeconds((current) => (current === null ? null : Math.max(0, current - 1)));
     }, 1000);
-
     return () => window.clearTimeout(timerId);
   }, [isTimerRunning, remainingSeconds]);
 
@@ -568,10 +573,7 @@ function GameContent() {
 
   const startTimer = async () => {
     if (!timerSeconds) return;
-    if (!timerAudioRef.current || timerAudioRef.current.state === "closed") {
-      timerAudioRef.current = createTimerAudioContext();
-    }
-
+    if (!timerAudioRef.current || timerAudioRef.current.state === "closed") timerAudioRef.current = createAudioContext();
     const audio = timerAudioRef.current;
     if (audio) {
       await audio.resume();
@@ -585,7 +587,6 @@ function GameContent() {
       });
       scheduledEndSoundRef.current = playTimerSound(audio, "end", audio.currentTime + timerSeconds);
     }
-
     setRemainingSeconds((current) => (current === null || current <= 0 ? timerSeconds : current));
     setIsTimerRunning(true);
   };
@@ -593,29 +594,15 @@ function GameContent() {
   const addCustomItem = (kind: "action" | "bodyPart") => {
     const value = (kind === "action" ? newAction : newBodyPart).trim();
     if (!value) return;
+    const item = { label: value, score: customComboItemScore };
 
     if (kind === "action") {
-      setComboActions((current) =>
-        current.some((item) => comboLabelKey(item) === value) ? current : [...current, { label: value, score: customComboItemScore }]
-      );
+      setComboActions((current) => (current.some((existing) => comboLabelKey(existing) === value) ? current : [...current, item]));
       setNewAction("");
       return;
     }
 
-    setComboBodyParts((current) =>
-      current.some((item) => comboLabelKey(item) === value) ? current : [...current, { label: value, score: customComboItemScore }]
-    );
-    setNewBodyPart("");
-  };
-
-  const resetComboItems = (kind: "action" | "bodyPart") => {
-    if (kind === "action") {
-      setComboActions(actionDefaults);
-      setNewAction("");
-      return;
-    }
-
-    setComboBodyParts(bodyPartDefaults);
+    setComboBodyParts((current) => (current.some((existing) => comboLabelKey(existing) === value) ? current : [...current, item]));
     setNewBodyPart("");
   };
 
@@ -646,12 +633,26 @@ function GameContent() {
     pullCard(nextLevel, card?.id);
   };
 
+  const toggleSelectedLanguage = (language: Lang) => {
+    setSelectedLanguages((current) => {
+      if (current.includes(language)) return current.filter((value) => value !== language);
+      if (current.length >= 2) return current;
+      return [...current, language];
+    });
+  };
+
   const endGame = () => {
     if (isDrawing) return;
-    const finalStats = { ...stats, endedAt: new Date().toISOString() };
-    window.localStorage.setItem("velvetCards.lastGame", JSON.stringify(finalStats));
+    window.localStorage.setItem("velvetCards.lastGame", JSON.stringify({ ...stats, endedAt: new Date().toISOString() }));
     router.push("/summary");
   };
+
+  const selectedLanguageSummary = selectedLanguages.length
+    ? selectedLanguages
+        .map((language) => languageOptions.find((option) => option.code === language)?.shortLabel)
+        .filter(Boolean)
+        .join("/")
+    : "文";
 
   return (
     <main className="safe-screen px-4 py-4">
@@ -665,12 +666,8 @@ function GameContent() {
             <Home aria-hidden="true" size={20} />
           </Link>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.28em] text-gold/75">
-              {isComboOnly ? "限制級" : `Level ${currentLevel}`}
-            </p>
-            <h1 className="text-lg font-semibold text-stone-50">
-              {isComboOnly ? "限制級模式" : levelNames[currentLevel]}
-            </h1>
+            <p className="text-xs uppercase tracking-[0.28em] text-gold/75">{isComboOnly ? "限制級" : `Level ${currentLevel}`}</p>
+            <h1 className="text-lg font-semibold text-stone-50">{isComboOnly ? "限制級模式" : levelNames[currentLevel]}</h1>
           </div>
           <button
             aria-label="結束遊戲"
@@ -714,31 +711,42 @@ function GameContent() {
                     </span>
                   ))}
                 </div>
+
                 <h2 className={`mt-8 text-4xl font-semibold leading-tight text-stone-50 ${isDrawing ? "animate-pulse" : ""}`}>
                   {card.title}
                 </h2>
-                {languageMode === "zh-en" && card.titleEn ? (
-                  <p className={`mt-3 text-xl font-semibold leading-snug text-gold/85 ${isDrawing ? "animate-pulse" : ""}`}>
-                    {card.titleEn}
-                  </p>
-                ) : null}
+                {selectedLanguages.map((language) => {
+                  const translation = card.translations[language];
+                  if (!translation?.title) return null;
+                  return (
+                    <p className={`mt-3 text-xl font-semibold leading-snug text-gold/85 ${isDrawing ? "animate-pulse" : ""}`} key={language}>
+                      <LanguageMark language={language} tone="gold" />
+                      {translation.title}
+                    </p>
+                  );
+                })}
+
                 <p className={`mt-7 text-2xl font-medium leading-relaxed text-stone-100 ${isDrawing ? "animate-pulse" : ""}`}>
                   {card.displayText}
                 </p>
-                {languageMode === "zh-en" && card.displayTextEn ? (
-                  <p className={`mt-4 text-lg font-medium leading-relaxed text-stone-300 ${isDrawing ? "animate-pulse" : ""}`}>
-                    {card.displayTextEn}
-                  </p>
-                ) : null}
+                {selectedLanguages.map((language) => {
+                  const translation = card.translations[language];
+                  if (!translation?.text) return null;
+                  return (
+                    <p className={`mt-4 text-lg font-medium leading-relaxed text-stone-300 ${isDrawing ? "animate-pulse" : ""}`} key={language}>
+                      <LanguageMark language={language} />
+                      {translation.text}
+                    </p>
+                  );
+                })}
+
                 {timerSeconds ? (
                   <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-black/25 p-4">
                     <div className="flex items-center gap-3">
                       <Clock3 aria-hidden="true" className="text-gold" size={22} />
                       <div>
                         <p className="text-xs text-stone-400">計時</p>
-                        <p className="text-3xl font-semibold text-stone-50">
-                          {formatTime(remainingSeconds ?? timerSeconds)}
-                        </p>
+                        <p className="text-3xl font-semibold text-stone-50">{formatTime(remainingSeconds ?? timerSeconds)}</p>
                       </div>
                     </div>
                     <button
@@ -764,15 +772,14 @@ function GameContent() {
         </article>
 
         <div className="grid grid-cols-2 gap-3 pb-3">
-          <ActionButton actor="male" icon={Check} label="男生完成" marker="♂" onClick={() => complete("male")} tone="dark" disabled={isDrawing} />
-          <ActionButton actor="female" icon={Check} label="女生完成" marker="♀" onClick={() => complete("female")} tone="dark" disabled={isDrawing} />
-          <ActionButton actor="male" icon={Shuffle} label="男生跳過" marker="♂" onClick={() => skip("male")} tone="dark" disabled={isDrawing} />
-          <ActionButton actor="female" icon={Shuffle} label="女生跳過" marker="♀" onClick={() => skip("female")} tone="dark" disabled={isDrawing} />
+          <ActionButton actor="male" icon={Check} label="男生完成" marker="♂" onClick={() => complete("male")} disabled={isDrawing} />
+          <ActionButton actor="female" icon={Check} label="女生完成" marker="♀" onClick={() => complete("female")} disabled={isDrawing} />
+          <ActionButton actor="male" icon={Shuffle} label="男生跳過" marker="♂" onClick={() => skip("male")} disabled={isDrawing} />
+          <ActionButton actor="female" icon={Shuffle} label="女生跳過" marker="♀" onClick={() => skip("female")} disabled={isDrawing} />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
             label={isComboOnly ? "限制級" : "降一級"}
             onClick={lowerLevel}
-            tone="dark"
             disabled={isDrawing || isComboOnly || currentLevel === 1}
           />
         </div>
@@ -790,24 +797,24 @@ function GameContent() {
 
         <div className="flex items-center justify-center gap-2 pb-3 pt-1">
           <button
-            aria-label={languageMode === "zh-en" ? "切換為只顯示中文" : "切換為中英同時顯示"}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-200/10 bg-purple-950/15 text-purple-100/70 active:scale-[0.98]"
-            onClick={() => setLanguageMode((current) => (current === "zh-en" ? "zh" : "zh-en"))}
-            title={languageMode === "zh-en" ? "切換為只顯示中文" : "切換為中英同時顯示"}
+            aria-label="選擇顯示語言"
+            className={`flex h-10 min-w-10 items-center justify-center rounded-full border px-3 active:scale-[0.98] ${
+              isLanguagePanelOpen
+                ? "border-purple-200/25 bg-purple-950/35 text-purple-100"
+                : "border-purple-200/10 bg-purple-950/15 text-purple-100/70"
+            }`}
+            onClick={() => setIsLanguagePanelOpen((current) => !current)}
+            title="選擇顯示語言"
             type="button"
           >
-            <span aria-hidden="true" className="text-sm font-semibold leading-none">
-              {languageMode === "zh-en" ? "文/A" : "文"}
-            </span>
+            <span aria-hidden="true" className="text-sm font-semibold leading-none">{selectedLanguageSummary}</span>
           </button>
 
           {isComboOnly ? (
             <button
               aria-label={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
               className={`flex h-10 w-10 items-center justify-center rounded-full border active:scale-[0.98] ${
-                isManagingCombo
-                  ? "border-gold/30 bg-gold/15 text-gold"
-                  : "border-gold/10 bg-stone-950/35 text-gold/55"
+                isManagingCombo ? "border-gold/30 bg-gold/15 text-gold" : "border-gold/10 bg-stone-950/35 text-gold/55"
               }`}
               onClick={() => setIsManagingCombo((current) => !current)}
               title={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
@@ -818,6 +825,37 @@ function GameContent() {
           ) : null}
         </div>
 
+        {isLanguagePanelOpen ? (
+          <section className="mb-3 rounded-2xl border border-purple-200/10 bg-stone-950/45 p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-stone-200">語言</p>
+              <p className="text-xs text-stone-500">{selectedLanguages.length}/2</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {languageOptions.map((language) => {
+                const isSelected = selectedLanguages.includes(language.code);
+                const isDisabled = !isSelected && selectedLanguages.length >= 2;
+                return (
+                  <button
+                    aria-label={`切換${language.label}`}
+                    aria-pressed={isSelected}
+                    className={`flex min-h-10 items-center justify-between rounded-xl border px-3 text-sm font-semibold active:scale-[0.98] disabled:opacity-35 ${
+                      isSelected ? "border-purple-200/25 bg-purple-950/45 text-purple-50" : "border-stone-100/10 bg-black/20 text-stone-400"
+                    }`}
+                    disabled={isDisabled}
+                    key={language.code}
+                    onClick={() => toggleSelectedLanguage(language.code)}
+                    type="button"
+                  >
+                    <span>{language.label}</span>
+                    <span className="text-xs uppercase text-gold/70">{language.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
         {isComboOnly && isManagingCombo ? (
           <section className="mb-3 space-y-3 rounded-2xl border border-gold/12 bg-stone-950/50 p-4">
             <ComboListEditor
@@ -827,7 +865,10 @@ function GameContent() {
               onAdd={() => addCustomItem("action")}
               onInputChange={setNewAction}
               onRemove={(item) => setComboActions((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
-              onReset={() => resetComboItems("action")}
+              onReset={() => {
+                setComboActions(actionDefaults);
+                setNewAction("");
+              }}
               placeholder="新增動作"
             />
             <ComboListEditor
@@ -837,13 +878,24 @@ function GameContent() {
               onAdd={() => addCustomItem("bodyPart")}
               onInputChange={setNewBodyPart}
               onRemove={(item) => setComboBodyParts((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
-              onReset={() => resetComboItems("bodyPart")}
+              onReset={() => {
+                setComboBodyParts(bodyPartDefaults);
+                setNewBodyPart("");
+              }}
               placeholder="新增身體部位"
             />
           </section>
         ) : null}
       </section>
     </main>
+  );
+}
+
+function LanguageMark({ language, tone = "muted" }: { language: Lang; tone?: "gold" | "muted" }) {
+  return (
+    <span className={`mr-2 text-xs uppercase tracking-[0.16em] ${tone === "gold" ? "text-gold/55" : "text-stone-500"}`}>
+      {languageOptions.find((option) => option.code === language)?.shortLabel}
+    </span>
   );
 }
 
@@ -909,9 +961,7 @@ function ComboListEditor({
             key={comboLabelKey(item)}
           >
             <span className="truncate">{comboLabelKey(item)}</span>
-            <span className="rounded-full bg-gold/10 px-2 py-0.5 text-xs font-semibold text-gold">
-              {item.score}
-            </span>
+            <span className="rounded-full bg-gold/10 px-2 py-0.5 text-xs font-semibold text-gold">{item.score}</span>
             <button
               aria-label={`刪除${comboLabelKey(item)}`}
               className="text-stone-400 active:text-red-200 disabled:opacity-30"
@@ -943,8 +993,7 @@ function ActionButton({
   icon: Icon,
   label,
   marker,
-  onClick,
-  tone
+  onClick
 }: {
   actor?: "male" | "female";
   disabled?: boolean;
@@ -952,16 +1001,13 @@ function ActionButton({
   label: string;
   marker?: string;
   onClick: () => void;
-  tone: "gold" | "dark";
 }) {
   const toneClass =
     actor === "male"
       ? "border-sky-300/30 bg-gradient-to-br from-[#244a7e] via-[#1d285a] to-[#120d22] text-sky-100 shadow-[0_16px_32px_rgba(36,74,126,0.24)]"
       : actor === "female"
         ? "border-rose-300/30 bg-gradient-to-br from-[#8a2c55] via-[#55224f] to-[#160d22] text-rose-100 shadow-[0_16px_32px_rgba(138,44,85,0.22)]"
-        : tone === "gold"
-      ? "border-gold/30 bg-gradient-to-br from-gold to-[#8f6528] text-stone-950"
-      : "border-gold/15 bg-stone-950/65 text-stone-100";
+        : "border-gold/15 bg-stone-950/65 text-stone-100";
   const markerClass =
     actor === "male"
       ? "text-sky-100/70"
