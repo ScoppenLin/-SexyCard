@@ -130,6 +130,14 @@ function drawComboCard(comboActions: string[], comboBodyParts: string[], previou
   return buildDisplayCard(randomItem(candidates), comboActions, comboBodyParts);
 }
 
+function makePreviewDeck(level: Level, isComboOnly: boolean, comboActions: string[], comboBodyParts: string[]): DisplayCard[] {
+  const pool = isComboOnly
+    ? cards.filter((previewCard) => previewCard.type === "combo")
+    : cards.filter((previewCard) => previewCard.level === level && previewCard.type !== "combo");
+
+  return pool.map((previewCard) => buildDisplayCard(previewCard, comboActions, comboBodyParts));
+}
+
 function normalizeLevel(value: string | null): Level {
   if (value === "2") return 2;
   if (value === "3") return 3;
@@ -202,6 +210,27 @@ function playTimerSound(audio: AudioContext, kind: "start" | "end", startAt = au
   return nodes;
 }
 
+function playDrawSound(audio: AudioContext, kind: "tick" | "settle") {
+  const now = audio.currentTime;
+  const gain = audio.createGain();
+  const oscillator = audio.createOscillator();
+
+  oscillator.type = "triangle";
+  oscillator.frequency.setValueAtTime(kind === "tick" ? 520 : 880, now);
+  if (kind === "settle") {
+    oscillator.frequency.exponentialRampToValueAtTime(1180, now + 0.18);
+  }
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(kind === "tick" ? 0.08 : 0.16, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "tick" ? 0.08 : 0.28));
+
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+  oscillator.start(now);
+  oscillator.stop(now + (kind === "tick" ? 0.09 : 0.3));
+}
+
 function GameContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -209,10 +238,13 @@ function GameContent() {
   const initialLevel = useMemo(() => normalizeLevel(searchParams.get("level")), [searchParams]);
   const [currentLevel, setCurrentLevel] = useState<Level>(initialLevel);
   const [card, setCard] = useState<DisplayCard | null>(null);
-  const timerSeconds = useMemo(() => (card ? parseTimerSeconds(card.displayText) : null), [card]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const timerSeconds = useMemo(() => (!isDrawing && card ? parseTimerSeconds(card.displayText) : null), [card, isDrawing]);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerAudioRef = useRef<AudioContext | null>(null);
+  const drawAudioRef = useRef<AudioContext | null>(null);
+  const revealTimeoutsRef = useRef<number[]>([]);
   const scheduledEndSoundRef = useRef<OscillatorNode[]>([]);
   const [comboActions, setComboActions] = useState<string[]>(actionDefaults);
   const [comboBodyParts, setComboBodyParts] = useState<string[]>(bodyPartDefaults);
@@ -234,18 +266,56 @@ function GameContent() {
     startedAt: new Date().toISOString()
   });
 
+  const clearRevealTimers = useCallback(() => {
+    revealTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    revealTimeoutsRef.current = [];
+  }, []);
+
+  const playRevealSound = useCallback((kind: "tick" | "settle") => {
+    if (!drawAudioRef.current || drawAudioRef.current.state === "closed") {
+      drawAudioRef.current = createTimerAudioContext();
+    }
+
+    const audio = drawAudioRef.current;
+    if (!audio) return;
+
+    void audio.resume().then(() => playDrawSound(audio, kind)).catch(() => undefined);
+  }, []);
+
   const pullCard = useCallback((level: Level, previousId?: string) => {
+    clearRevealTimers();
     const nextCard = isComboOnly
       ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, previousId)
       : drawCard(level, previousId);
-    setCard(nextCard);
-    setStats((current) => ({
-      ...current,
-      level,
-      mode: isComboOnly ? "combo" : "level",
-      totalDraws: current.totalDraws + 1
-    }));
-  }, [isComboOnly]);
+    const previewDeck = makePreviewDeck(level, isComboOnly, comboActionsRef.current, comboBodyPartsRef.current);
+    const revealSteps = [0, 55, 115, 185, 275, 390, 535, 715, 945, 1240];
+
+    setIsDrawing(true);
+    setIsTimerRunning(false);
+    setRemainingSeconds(null);
+
+    revealSteps.forEach((delay) => {
+      const timeoutId = window.setTimeout(() => {
+        setCard(randomItem(previewDeck));
+        playRevealSound("tick");
+      }, delay);
+      revealTimeoutsRef.current.push(timeoutId);
+    });
+
+    const finalTimeoutId = window.setTimeout(() => {
+      setCard(nextCard);
+      setStats((current) => ({
+        ...current,
+        level,
+        mode: isComboOnly ? "combo" : "level",
+        totalDraws: current.totalDraws + 1
+      }));
+      setIsDrawing(false);
+      playRevealSound("settle");
+      revealTimeoutsRef.current = [];
+    }, 1620);
+    revealTimeoutsRef.current.push(finalTimeoutId);
+  }, [clearRevealTimers, isComboOnly, playRevealSound]);
 
   useEffect(() => {
     const storedActions = readStoredList(comboActionsStorageKey, actionDefaults);
@@ -310,9 +380,11 @@ function GameContent() {
 
   useEffect(() => {
     return () => {
+      clearRevealTimers();
       void timerAudioRef.current?.close();
+      void drawAudioRef.current?.close();
     };
-  }, []);
+  }, [clearRevealTimers]);
 
   const startTimer = async () => {
     if (!timerSeconds) return;
@@ -364,6 +436,7 @@ function GameContent() {
   };
 
   const complete = (player: "male" | "female") => {
+    if (isDrawing) return;
     setStats((current) => ({
       ...current,
       maleCompleted: player === "male" ? current.maleCompleted + 1 : current.maleCompleted,
@@ -373,6 +446,7 @@ function GameContent() {
   };
 
   const skip = (player: "male" | "female") => {
+    if (isDrawing) return;
     setStats((current) => ({
       ...current,
       maleSkipped: player === "male" ? current.maleSkipped + 1 : current.maleSkipped,
@@ -382,12 +456,14 @@ function GameContent() {
   };
 
   const lowerLevel = () => {
+    if (isDrawing) return;
     const nextLevel = currentLevel === 3 ? 2 : 1;
     setCurrentLevel(nextLevel);
     pullCard(nextLevel, card?.id);
   };
 
   const endGame = () => {
+    if (isDrawing) return;
     const finalStats = { ...stats, endedAt: new Date().toISOString() };
     window.localStorage.setItem("velvetCards.lastGame", JSON.stringify(finalStats));
     router.push("/summary");
@@ -414,7 +490,8 @@ function GameContent() {
           </div>
           <button
             aria-label="結束遊戲"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-red-300/20 bg-red-950/30 text-red-100"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-red-300/20 bg-red-950/30 text-red-100 disabled:opacity-40"
+            disabled={isDrawing}
             onClick={endGame}
             type="button"
           >
@@ -466,13 +543,17 @@ function GameContent() {
           </section>
         ) : null}
 
-        <article className="my-4 flex flex-1 flex-col justify-between rounded-[1.75rem] border border-gold/25 bg-gradient-to-br from-stone-950 via-plum to-velvet p-6 shadow-card">
+        <article
+          className={`my-4 flex flex-1 flex-col justify-between rounded-[1.75rem] border border-gold/25 bg-gradient-to-br from-stone-950 via-plum to-velvet p-6 shadow-card transition duration-200 ${
+            isDrawing ? "scale-[1.015] border-gold/45 shadow-[0_0_40px_rgba(200,162,90,0.18)]" : ""
+          }`}
+        >
           {card ? (
             <>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-gold">
-                    {card.type === "combo" ? "限制級" : card.type}
+                    {isDrawing ? "揭牌中" : card.type === "combo" ? "限制級" : card.type}
                   </span>
                   {card.tags.slice(0, 2).map((tag) => (
                     <span className="rounded-full bg-stone-50/10 px-3 py-1 text-xs text-stone-300" key={tag}>
@@ -480,8 +561,12 @@ function GameContent() {
                     </span>
                   ))}
                 </div>
-                <h2 className="mt-8 text-4xl font-semibold leading-tight text-stone-50">{card.title}</h2>
-                <p className="mt-7 text-2xl font-medium leading-relaxed text-stone-100">{card.displayText}</p>
+                <h2 className={`mt-8 text-4xl font-semibold leading-tight text-stone-50 ${isDrawing ? "animate-pulse" : ""}`}>
+                  {card.title}
+                </h2>
+                <p className={`mt-7 text-2xl font-medium leading-relaxed text-stone-100 ${isDrawing ? "animate-pulse" : ""}`}>
+                  {card.displayText}
+                </p>
                 {timerSeconds ? (
                   <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-black/25 p-4">
                     <div className="flex items-center gap-3">
@@ -515,21 +600,22 @@ function GameContent() {
         </article>
 
         <div className="grid grid-cols-2 gap-3 pb-3">
-          <ActionButton icon={Check} label="男生完成" onClick={() => complete("male")} tone="gold" />
-          <ActionButton icon={Check} label="女生完成" onClick={() => complete("female")} tone="gold" />
-          <ActionButton icon={Shuffle} label="男生跳過" onClick={() => skip("male")} tone="dark" />
-          <ActionButton icon={Shuffle} label="女生跳過" onClick={() => skip("female")} tone="dark" />
+          <ActionButton icon={Check} label="男生完成" onClick={() => complete("male")} tone="gold" disabled={isDrawing} />
+          <ActionButton icon={Check} label="女生完成" onClick={() => complete("female")} tone="gold" disabled={isDrawing} />
+          <ActionButton icon={Shuffle} label="男生跳過" onClick={() => skip("male")} tone="dark" disabled={isDrawing} />
+          <ActionButton icon={Shuffle} label="女生跳過" onClick={() => skip("female")} tone="dark" disabled={isDrawing} />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
             label={isComboOnly ? "限制級" : "降一級"}
             onClick={lowerLevel}
             tone="dark"
-            disabled={isComboOnly || currentLevel === 1}
+            disabled={isDrawing || isComboOnly || currentLevel === 1}
           />
         </div>
 
         <button
-          className="mb-2 min-h-12 rounded-2xl border border-red-300/25 bg-red-950/35 px-5 text-base font-semibold text-red-50 active:scale-[0.99]"
+          className="mb-2 min-h-12 rounded-2xl border border-red-300/25 bg-red-950/35 px-5 text-base font-semibold text-red-50 active:scale-[0.99] disabled:opacity-40"
+          disabled={isDrawing}
           onClick={endGame}
           type="button"
         >
