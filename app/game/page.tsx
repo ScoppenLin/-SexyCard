@@ -56,7 +56,7 @@ function buildDisplayCard(card: Card): DisplayCard {
   const action = randomItem(actions);
   const bodyPart = randomItem(bodyParts);
   const duration = randomItem(durations);
-  const comboText = `${action}${bodyPart}，持續 ${duration}。過程中任一方都可以調整、暫停或跳過。`;
+  const comboText = `${action}${bodyPart}，持續 ${duration}。`;
 
   return {
     ...card,
