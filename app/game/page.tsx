@@ -3,10 +3,24 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ElementType } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, Check, Clock3, Home, Play, RefreshCcw, Shuffle, Square, Wand2 } from "lucide-react";
+import {
+  ArrowDown,
+  Check,
+  Clock3,
+  Home,
+  Play,
+  Plus,
+  RefreshCcw,
+  Settings2,
+  Shuffle,
+  Square,
+  Trash2,
+  Wand2,
+  X
+} from "lucide-react";
 import cardsData from "@/data/cards.json";
-import actions from "@/data/actions.json";
-import bodyParts from "@/data/bodyParts.json";
+import defaultActions from "@/data/actions.json";
+import defaultBodyParts from "@/data/bodyParts.json";
 import durations from "@/data/durations.json";
 
 type Level = 1 | 2 | 3;
@@ -37,6 +51,10 @@ type GameStats = {
 };
 
 const cards = cardsData as unknown as Card[];
+const actionDefaults = defaultActions as string[];
+const bodyPartDefaults = defaultBodyParts as string[];
+const comboActionsStorageKey = "velvetCards.comboActions";
+const comboBodyPartsStorageKey = "velvetCards.comboBodyParts";
 type TimerAudioContext = AudioContext & { webkitAudioContext?: never };
 
 const levelNames: Record<Level, string> = {
@@ -63,13 +81,32 @@ function randomItem<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function buildDisplayCard(card: Card): DisplayCard {
+function normalizeCustomList(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) return fallback;
+
+  const normalized = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(normalized)).length ? Array.from(new Set(normalized)) : fallback;
+}
+
+function readStoredList(key: string, fallback: string[]): string[] {
+  try {
+    return normalizeCustomList(JSON.parse(window.localStorage.getItem(key) ?? "null"), fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function buildDisplayCard(card: Card, comboActions = actionDefaults, comboBodyParts = bodyPartDefaults): DisplayCard {
   if (card.type !== "combo") {
     return { ...card, displayText: card.text };
   }
 
-  const action = randomItem(actions);
-  const bodyPart = randomItem(bodyParts);
+  const action = randomItem(comboActions);
+  const bodyPart = randomItem(comboBodyParts);
   const duration = randomItem(durations);
   const comboText = `${action}${bodyPart}，持續 ${duration}。`;
 
@@ -86,10 +123,10 @@ function drawCard(level: Level, previousId?: string): DisplayCard {
   return buildDisplayCard(randomItem(candidates));
 }
 
-function drawComboCard(previousId?: string): DisplayCard {
+function drawComboCard(comboActions: string[], comboBodyParts: string[], previousId?: string): DisplayCard {
   const pool = cards.filter((card) => card.type === "combo");
   const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
-  return buildDisplayCard(randomItem(candidates));
+  return buildDisplayCard(randomItem(candidates), comboActions, comboBodyParts);
 }
 
 function normalizeLevel(value: string | null): Level {
@@ -176,6 +213,15 @@ function GameContent() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerAudioRef = useRef<AudioContext | null>(null);
   const scheduledEndSoundRef = useRef<OscillatorNode[]>([]);
+  const [comboActions, setComboActions] = useState<string[]>(actionDefaults);
+  const [comboBodyParts, setComboBodyParts] = useState<string[]>(bodyPartDefaults);
+  const comboActionsRef = useRef(actionDefaults);
+  const comboBodyPartsRef = useRef(bodyPartDefaults);
+  const hasPulledInitialCardRef = useRef(false);
+  const [comboSettingsReady, setComboSettingsReady] = useState(false);
+  const [isManagingCombo, setIsManagingCombo] = useState(false);
+  const [newAction, setNewAction] = useState("");
+  const [newBodyPart, setNewBodyPart] = useState("");
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
     totalDraws: 0,
@@ -186,7 +232,9 @@ function GameContent() {
   });
 
   const pullCard = useCallback((level: Level, previousId?: string) => {
-    const nextCard = isComboOnly ? drawComboCard(previousId) : drawCard(level, previousId);
+    const nextCard = isComboOnly
+      ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, previousId)
+      : drawCard(level, previousId);
     setCard(nextCard);
     setStats((current) => ({
       ...current,
@@ -196,8 +244,33 @@ function GameContent() {
   }, [isComboOnly]);
 
   useEffect(() => {
+    const storedActions = readStoredList(comboActionsStorageKey, actionDefaults);
+    const storedBodyParts = readStoredList(comboBodyPartsStorageKey, bodyPartDefaults);
+    comboActionsRef.current = storedActions;
+    comboBodyPartsRef.current = storedBodyParts;
+    setComboActions(storedActions);
+    setComboBodyParts(storedBodyParts);
+    setComboSettingsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasPulledInitialCardRef.current) return;
+    if (isComboOnly && !comboSettingsReady) return;
+    hasPulledInitialCardRef.current = true;
     pullCard(initialLevel);
-  }, [initialLevel, pullCard]);
+  }, [comboSettingsReady, initialLevel, isComboOnly, pullCard]);
+
+  useEffect(() => {
+    if (!comboSettingsReady) return;
+    comboActionsRef.current = comboActions;
+    window.localStorage.setItem(comboActionsStorageKey, JSON.stringify(comboActions));
+  }, [comboActions, comboSettingsReady]);
+
+  useEffect(() => {
+    if (!comboSettingsReady) return;
+    comboBodyPartsRef.current = comboBodyParts;
+    window.localStorage.setItem(comboBodyPartsStorageKey, JSON.stringify(comboBodyParts));
+  }, [comboBodyParts, comboSettingsReady]);
 
   useEffect(() => {
     window.localStorage.setItem("velvetCards.currentGame", JSON.stringify(stats));
@@ -261,6 +334,31 @@ function GameContent() {
     setIsTimerRunning(true);
   };
 
+  const addCustomItem = (kind: "action" | "bodyPart") => {
+    const value = (kind === "action" ? newAction : newBodyPart).trim();
+    if (!value) return;
+
+    if (kind === "action") {
+      setComboActions((current) => (current.includes(value) ? current : [...current, value]));
+      setNewAction("");
+      return;
+    }
+
+    setComboBodyParts((current) => (current.includes(value) ? current : [...current, value]));
+    setNewBodyPart("");
+  };
+
+  const resetComboItems = (kind: "action" | "bodyPart") => {
+    if (kind === "action") {
+      setComboActions(actionDefaults);
+      setNewAction("");
+      return;
+    }
+
+    setComboBodyParts(bodyPartDefaults);
+    setNewBodyPart("");
+  };
+
   const complete = () => {
     setStats((current) => ({ ...current, completed: current.completed + 1 }));
     pullCard(currentLevel, card?.id);
@@ -301,10 +399,10 @@ function GameContent() {
           </Link>
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.28em] text-gold/75">
-              {isComboOnly ? "Combo" : `Level ${currentLevel}`}
+              {isComboOnly ? "限制級" : `Level ${currentLevel}`}
             </p>
             <h1 className="text-lg font-semibold text-stone-50">
-              {isComboOnly ? "組合牌模式" : levelNames[currentLevel]}
+              {isComboOnly ? "限制級模式" : levelNames[currentLevel]}
             </h1>
           </div>
           <button
@@ -324,13 +422,49 @@ function GameContent() {
           <Stat label="換牌" value={stats.swapped} />
         </div>
 
+        {isComboOnly ? (
+          <button
+            className="mb-1 flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-gold/20 bg-stone-950/65 px-4 text-sm font-semibold text-gold active:scale-[0.99]"
+            onClick={() => setIsManagingCombo((current) => !current)}
+            type="button"
+          >
+            {isManagingCombo ? <X aria-hidden="true" size={16} /> : <Settings2 aria-hidden="true" size={16} />}
+            {isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
+          </button>
+        ) : null}
+
+        {isComboOnly && isManagingCombo ? (
+          <section className="mb-3 space-y-3 rounded-2xl border border-gold/18 bg-stone-950/70 p-4">
+            <ComboListEditor
+              inputValue={newAction}
+              items={comboActions}
+              label="動作"
+              onAdd={() => addCustomItem("action")}
+              onInputChange={setNewAction}
+              onRemove={(item) => setComboActions((current) => current.filter((value) => value !== item))}
+              onReset={() => resetComboItems("action")}
+              placeholder="新增動作"
+            />
+            <ComboListEditor
+              inputValue={newBodyPart}
+              items={comboBodyParts}
+              label="身體部位"
+              onAdd={() => addCustomItem("bodyPart")}
+              onInputChange={setNewBodyPart}
+              onRemove={(item) => setComboBodyParts((current) => current.filter((value) => value !== item))}
+              onReset={() => resetComboItems("bodyPart")}
+              placeholder="新增身體部位"
+            />
+          </section>
+        ) : null}
+
         <article className="my-4 flex flex-1 flex-col justify-between rounded-[1.75rem] border border-gold/25 bg-gradient-to-br from-stone-950 via-plum to-velvet p-6 shadow-card">
           {card ? (
             <>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-gold">
-                    {card.type === "combo" ? "Combo" : card.type}
+                    {card.type === "combo" ? "限制級" : card.type}
                   </span>
                   {card.tags.slice(0, 2).map((tag) => (
                     <span className="rounded-full bg-stone-50/10 px-3 py-1 text-xs text-stone-300" key={tag}>
@@ -378,7 +512,7 @@ function GameContent() {
           <ActionButton icon={RefreshCcw} label="換一張" onClick={swap} tone="dark" />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
-            label={isComboOnly ? "組合中" : "降一級"}
+            label={isComboOnly ? "限制級" : "降一級"}
             onClick={lowerLevel}
             tone="dark"
             disabled={isComboOnly || currentLevel === 1}
@@ -394,6 +528,78 @@ function GameContent() {
         </button>
       </section>
     </main>
+  );
+}
+
+function ComboListEditor({
+  inputValue,
+  items,
+  label,
+  onAdd,
+  onInputChange,
+  onRemove,
+  onReset,
+  placeholder
+}: {
+  inputValue: string;
+  items: string[];
+  label: string;
+  onAdd: () => void;
+  onInputChange: (value: string) => void;
+  onRemove: (value: string) => void;
+  onReset: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-stone-100">
+          {label}
+          <span className="ml-2 text-xs font-normal text-stone-400">{items.length} 項</span>
+        </p>
+        <button className="text-xs font-semibold text-gold/85" onClick={onReset} type="button">
+          還原預設
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <input
+          className="min-h-11 min-w-0 flex-1 rounded-xl border border-gold/15 bg-black/35 px-3 text-base text-stone-50 outline-none placeholder:text-stone-500 focus:border-gold/45"
+          onChange={(event) => onInputChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onAdd();
+          }}
+          placeholder={placeholder}
+          value={inputValue}
+        />
+        <button
+          aria-label={`新增${label}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold text-stone-950 active:scale-[0.98]"
+          onClick={onAdd}
+          type="button"
+        >
+          <Plus aria-hidden="true" size={18} />
+        </button>
+      </div>
+      <div className="mt-3 flex max-h-32 flex-wrap gap-2 overflow-auto pr-1">
+        {items.map((item) => (
+          <span
+            className="inline-flex max-w-full items-center gap-2 rounded-full border border-gold/15 bg-black/25 px-3 py-2 text-sm text-stone-200"
+            key={item}
+          >
+            <span className="truncate">{item}</span>
+            <button
+              aria-label={`刪除${item}`}
+              className="text-stone-400 active:text-red-200 disabled:opacity-30"
+              disabled={items.length <= 1}
+              onClick={() => onRemove(item)}
+              type="button"
+            >
+              <Trash2 aria-hidden="true" size={14} />
+            </button>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
