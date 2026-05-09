@@ -27,7 +27,7 @@ const modes = [
   },
   {
     level: "combo",
-    name: "組合牌模式",
+    name: "限制級模式",
     subtitle: "每一張都即時組合，讓今晚更不可預測",
     icon: Wand2,
     href: "/game?mode=combo"
@@ -65,7 +65,7 @@ export default function Home() {
                   <span className="block text-xl font-semibold text-stone-50">
                     {mode.name}{" "}
                     <span className="text-gold">
-                      {mode.level === "combo" ? "Combo" : `Level ${mode.level}`}
+                      {mode.level === "combo" ? "限制級" : `Level ${mode.level}`}
                     </span>
                   </span>
                   <span className="mt-1 block text-sm leading-6 text-stone-300">{mode.subtitle}</span>
