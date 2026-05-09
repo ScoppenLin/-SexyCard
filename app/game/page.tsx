@@ -247,9 +247,25 @@ function translationsFor(cardId: string): Partial<Record<Lang, TranslationText>>
   );
 }
 
+function progressiveScoreCap(drawIndex: number, maxAvailableScore: number): number {
+  const drawNumber = Math.max(1, drawIndex + 1);
+  const rawCap = drawNumber === 1 ? 5 : 5 + 16 * Math.pow((drawNumber - 1) / 10, 1.18);
+
+  return Math.min(maxAvailableScore, Math.max(5, Math.round(rawCap)));
+}
+
+function progressiveTargetScore(drawIndex: number, scoreCap: number): number {
+  const drawNumber = Math.max(1, drawIndex + 1);
+  const trend = 4 + 19 * (1 - Math.exp(-(drawNumber - 1) / 6.5));
+  const wobbleRange = 2.2 + Math.min(5, drawNumber * 0.28);
+  const randomSwing = (Math.random() - 0.5) * wobbleRange * 2;
+  const occasionalDip = Math.random() < 0.18 ? -(2 + Math.random() * 4) : 0;
+  const occasionalPush = drawNumber > 7 && Math.random() < 0.14 ? Math.random() * 5 : 0;
+
+  return Math.min(scoreCap, Math.max(1, trend + randomSwing + occasionalDip + occasionalPush));
+}
+
 function pickProgressiveComboParts(actions: ComboItem[], bodyParts: ComboItem[], durations: ComboItem[], drawIndex: number) {
-  const climb = Math.min(18, drawIndex * 0.75);
-  const targetScore = 8 + climb + (Math.random() * 7 - 3.5);
   const combinations = actions.flatMap((action) =>
     bodyParts.flatMap((bodyPart) =>
       durations.map((duration) => ({
@@ -260,11 +276,18 @@ function pickProgressiveComboParts(actions: ComboItem[], bodyParts: ComboItem[],
       }))
     )
   );
-  const weighted = combinations.map((combination) => {
+  const maxAvailableScore = Math.max(...combinations.map((combination) => combination.score));
+  const scoreCap = progressiveScoreCap(drawIndex, maxAvailableScore);
+  const targetScore = progressiveTargetScore(drawIndex, scoreCap);
+  const cappedCombinations = combinations.filter((combination) => combination.score <= scoreCap);
+  const candidateCombinations = cappedCombinations.length
+    ? cappedCombinations
+    : combinations.filter((combination) => combination.score === Math.min(...combinations.map((item) => item.score)));
+  const weighted = candidateCombinations.map((combination) => {
     const distance = Math.abs(combination.score - targetScore);
     const surpriseBonus = Math.random() < 0.16 ? 2.6 : 1;
-    const highScoreLift = 1 + Math.max(0, combination.score - 10) * 0.03;
-    return { combination, weight: (1 / Math.pow(distance + 1, 1.75)) * surpriseBonus * highScoreLift };
+    const nearCeilingLift = 1 + Math.max(0, combination.score - scoreCap * 0.82) * 0.08;
+    return { combination, weight: (1 / Math.pow(distance + 1, 1.85)) * surpriseBonus * nearCeilingLift };
   });
   const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
   let cursor = Math.random() * totalWeight;
@@ -338,7 +361,7 @@ function makePreviewDeck(level: Level, isComboOnly: boolean, actions: ComboItem[
   const pool = isComboOnly
     ? cards.filter((card) => card.type === "combo")
     : cards.filter((card) => card.level === level && card.type !== "combo");
-  return pool.map((card, index) => buildDisplayCard(card, actions, bodyParts, drawIndex + index));
+  return pool.map((card) => buildDisplayCard(card, actions, bodyParts, drawIndex));
 }
 
 function normalizeLevel(value: string | null): Level {
