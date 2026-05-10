@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDown,
-  Check,
   Clock3,
   Home,
   Play,
@@ -55,10 +54,6 @@ type GameStats = {
   level: Level;
   mode: "level" | "combo";
   totalDraws: number;
-  maleCompleted: number;
-  femaleCompleted: number;
-  maleSkipped: number;
-  femaleSkipped: number;
   startedAt: string;
   endedAt?: string;
 };
@@ -79,10 +74,7 @@ const uiCopy: Record<AppLang, {
   home: string;
   endGame: string;
   drawCount: string;
-  maleDone: string;
-  femaleDone: string;
-  maleSkip: string;
-  femaleSkip: string;
+  drawAgain: string;
   revealing: string;
   heat: string;
   timer: string;
@@ -91,10 +83,6 @@ const uiCopy: Record<AppLang, {
   timerStart: string;
   consentNote: string;
   loadingCard: string;
-  maleComplete: string;
-  femaleComplete: string;
-  maleSkipAction: string;
-  femaleSkipAction: string;
   lowerLevel: string;
   chooseLanguages: string;
   languageTitle: string;
@@ -118,11 +106,8 @@ const uiCopy: Record<AppLang, {
     restrictedMode: "限制級模式",
     home: "回首頁",
     endGame: "結束遊戲",
-    drawCount: "抽卡",
-    maleDone: "男完成",
-    femaleDone: "女完成",
-    maleSkip: "男跳過",
-    femaleSkip: "女跳過",
+    drawCount: "抽牌",
+    drawAgain: "再抽一次",
     revealing: "揭牌中",
     heat: "熱度",
     timer: "計時",
@@ -131,10 +116,6 @@ const uiCopy: Record<AppLang, {
     timerStart: "開始計時",
     consentNote: "保持可溝通。任何一方不舒服時，這張牌自動改成擁抱、喝水或休息。",
     loadingCard: "抽牌中...",
-    maleComplete: "男生完成",
-    femaleComplete: "女生完成",
-    maleSkipAction: "男生跳過",
-    femaleSkipAction: "女生跳過",
     lowerLevel: "降一級",
     chooseLanguages: "選擇顯示語言",
     languageTitle: "語言",
@@ -159,10 +140,7 @@ const uiCopy: Record<AppLang, {
     home: "Home",
     endGame: "End game",
     drawCount: "Draws",
-    maleDone: "M done",
-    femaleDone: "F done",
-    maleSkip: "M skip",
-    femaleSkip: "F skip",
+    drawAgain: "Draw again",
     revealing: "Revealing",
     heat: "Heat",
     timer: "Timer",
@@ -171,10 +149,6 @@ const uiCopy: Record<AppLang, {
     timerStart: "Start timer",
     consentNote: "Keep checking in. If either person feels uncomfortable, turn this card into a hug, water break, or rest.",
     loadingCard: "Drawing...",
-    maleComplete: "Male complete",
-    femaleComplete: "Female complete",
-    maleSkipAction: "Male skip",
-    femaleSkipAction: "Female skip",
     lowerLevel: "Lower level",
     chooseLanguages: "Choose display languages",
     languageTitle: "Languages",
@@ -199,10 +173,7 @@ const uiCopy: Record<AppLang, {
     home: "Beranda",
     endGame: "Akhiri permainan",
     drawCount: "Kartu",
-    maleDone: "Pria selesai",
-    femaleDone: "Wanita selesai",
-    maleSkip: "Pria lewati",
-    femaleSkip: "Wanita lewati",
+    drawAgain: "Ambil lagi",
     revealing: "Membuka",
     heat: "Panas",
     timer: "Timer",
@@ -211,10 +182,6 @@ const uiCopy: Record<AppLang, {
     timerStart: "Mulai timer",
     consentNote: "Tetap saling mengecek. Jika ada yang tidak nyaman, ubah kartu ini menjadi pelukan, minum air, atau istirahat.",
     loadingCard: "Mengambil kartu...",
-    maleComplete: "Pria selesai",
-    femaleComplete: "Wanita selesai",
-    maleSkipAction: "Pria lewati",
-    femaleSkipAction: "Wanita lewati",
     lowerLevel: "Turun level",
     chooseLanguages: "Pilih bahasa tampilan",
     languageTitle: "Bahasa",
@@ -239,10 +206,7 @@ const uiCopy: Record<AppLang, {
     home: "Trang chủ",
     endGame: "Kết thúc",
     drawCount: "Lượt rút",
-    maleDone: "Nam xong",
-    femaleDone: "Nữ xong",
-    maleSkip: "Nam bỏ",
-    femaleSkip: "Nữ bỏ",
+    drawAgain: "Rút lại",
     revealing: "Đang mở",
     heat: "Độ nóng",
     timer: "Hẹn giờ",
@@ -251,10 +215,6 @@ const uiCopy: Record<AppLang, {
     timerStart: "Bắt đầu",
     consentNote: "Luôn trao đổi với nhau. Nếu ai thấy không thoải mái, hãy đổi lá này thành ôm, uống nước hoặc nghỉ.",
     loadingCard: "Đang rút...",
-    maleComplete: "Nam hoàn thành",
-    femaleComplete: "Nữ hoàn thành",
-    maleSkipAction: "Nam bỏ qua",
-    femaleSkipAction: "Nữ bỏ qua",
     lowerLevel: "Giảm cấp",
     chooseLanguages: "Chọn ngôn ngữ hiển thị",
     languageTitle: "Ngôn ngữ",
@@ -279,10 +239,7 @@ const uiCopy: Record<AppLang, {
     home: "ホーム",
     endGame: "終了",
     drawCount: "枚数",
-    maleDone: "男性完了",
-    femaleDone: "女性完了",
-    maleSkip: "男性スキップ",
-    femaleSkip: "女性スキップ",
+    drawAgain: "もう一枚",
     revealing: "公開中",
     heat: "熱度",
     timer: "タイマー",
@@ -291,10 +248,6 @@ const uiCopy: Record<AppLang, {
     timerStart: "開始",
     consentNote: "こまめに確認しましょう。どちらかが不快なら、このカードはハグ、水分補給、休憩に変えてください。",
     loadingCard: "カードを引いています...",
-    maleComplete: "男性完了",
-    femaleComplete: "女性完了",
-    maleSkipAction: "男性スキップ",
-    femaleSkipAction: "女性スキップ",
     lowerLevel: "レベルを下げる",
     chooseLanguages: "表示言語を選択",
     languageTitle: "言語",
@@ -319,10 +272,7 @@ const uiCopy: Record<AppLang, {
     home: "홈",
     endGame: "게임 종료",
     drawCount: "뽑기",
-    maleDone: "남 완료",
-    femaleDone: "여 완료",
-    maleSkip: "남 건너뜀",
-    femaleSkip: "여 건너뜀",
+    drawAgain: "다시 뽑기",
     revealing: "공개 중",
     heat: "열기",
     timer: "타이머",
@@ -331,10 +281,6 @@ const uiCopy: Record<AppLang, {
     timerStart: "시작",
     consentNote: "계속 서로 확인하세요. 불편하면 이 카드는 포옹, 물 마시기, 휴식으로 바꾸세요.",
     loadingCard: "카드 뽑는 중...",
-    maleComplete: "남성 완료",
-    femaleComplete: "여성 완료",
-    maleSkipAction: "남성 건너뛰기",
-    femaleSkipAction: "여성 건너뛰기",
     lowerLevel: "레벨 낮추기",
     chooseLanguages: "표시 언어 선택",
     languageTitle: "언어",
@@ -819,10 +765,6 @@ function GameContent() {
     level: initialLevel,
     mode: isComboOnly ? "combo" : "level",
     totalDraws: 0,
-    maleCompleted: 0,
-    femaleCompleted: 0,
-    maleSkipped: 0,
-    femaleSkipped: 0,
     startedAt: new Date().toISOString()
   });
   statsRef.current = stats;
@@ -985,23 +927,8 @@ function GameContent() {
     setNewBodyPart("");
   };
 
-  const complete = (player: "male" | "female") => {
+  const drawAgain = () => {
     if (isDrawing) return;
-    setStats((current) => ({
-      ...current,
-      maleCompleted: player === "male" ? current.maleCompleted + 1 : current.maleCompleted,
-      femaleCompleted: player === "female" ? current.femaleCompleted + 1 : current.femaleCompleted
-    }));
-    pullCard(currentLevel, card?.id);
-  };
-
-  const skip = (player: "male" | "female") => {
-    if (isDrawing) return;
-    setStats((current) => ({
-      ...current,
-      maleSkipped: player === "male" ? current.maleSkipped + 1 : current.maleSkipped,
-      femaleSkipped: player === "female" ? current.femaleSkipped + 1 : current.femaleSkipped
-    }));
     pullCard(currentLevel, card?.id);
   };
 
@@ -1046,6 +973,9 @@ function GameContent() {
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.28em] text-gold/75">{isComboOnly ? copy.restricted : `Level ${currentLevel}`}</p>
             <h1 className="text-lg font-semibold text-stone-50">{isComboOnly ? copy.restrictedMode : copy.levelNames[currentLevel]}</h1>
+            <p className="mt-1 text-[0.68rem] font-medium uppercase tracking-[0.16em] text-stone-500">
+              {copy.drawCount} {stats.totalDraws}
+            </p>
           </div>
           <button
             aria-label={copy.endGame}
@@ -1057,14 +987,6 @@ function GameContent() {
             <Square aria-hidden="true" size={17} />
           </button>
         </header>
-
-        <div className="grid grid-cols-5 gap-2 py-3 text-center">
-          <Stat label={copy.drawCount} value={stats.totalDraws} />
-          <Stat label={copy.maleDone} value={stats.maleCompleted} />
-          <Stat label={copy.femaleDone} value={stats.femaleCompleted} />
-          <Stat label={copy.maleSkip} value={stats.maleSkipped} />
-          <Stat label={copy.femaleSkip} value={stats.femaleSkipped} />
-        </div>
 
         <article
           className={`my-4 flex flex-1 flex-col justify-between rounded-[1.75rem] border border-gold/25 bg-gradient-to-br from-stone-950 via-plum to-velvet p-6 shadow-card transition duration-200 ${
@@ -1149,11 +1071,8 @@ function GameContent() {
           )}
         </article>
 
-        <div className="grid grid-cols-2 gap-3 pb-3">
-          <ActionButton actor="male" icon={Check} label={copy.maleComplete} marker="♂" onClick={() => complete("male")} disabled={isDrawing} />
-          <ActionButton actor="female" icon={Check} label={copy.femaleComplete} marker="♀" onClick={() => complete("female")} disabled={isDrawing} />
-          <ActionButton actor="male" icon={Shuffle} label={copy.maleSkipAction} marker="♂" onClick={() => skip("male")} disabled={isDrawing} />
-          <ActionButton actor="female" icon={Shuffle} label={copy.femaleSkipAction} marker="♀" onClick={() => skip("female")} disabled={isDrawing} />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 pb-3">
+          <ActionButton icon={Shuffle} label={copy.drawAgain} onClick={drawAgain} disabled={isDrawing} showText variant="primary" />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
             label={isComboOnly ? copy.restricted : copy.lowerLevel}
@@ -1390,42 +1309,25 @@ function ComboListEditor({
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-gold/12 bg-stone-950/50 px-2 py-3">
-      <p className="text-lg font-semibold text-stone-50">{value}</p>
-      <p className="mt-1 text-xs text-stone-400">{label}</p>
-    </div>
-  );
-}
-
 function ActionButton({
-  actor,
   disabled,
   icon: Icon,
   label,
-  marker,
-  onClick
+  onClick,
+  showText = false,
+  variant = "secondary"
 }: {
-  actor?: "male" | "female";
   disabled?: boolean;
   icon: ElementType;
   label: string;
-  marker?: string;
   onClick: () => void;
+  showText?: boolean;
+  variant?: "primary" | "secondary";
 }) {
   const toneClass =
-    actor === "male"
-      ? "border-sky-300/30 bg-gradient-to-br from-[#244a7e] via-[#1d285a] to-[#120d22] text-sky-100 shadow-[0_16px_32px_rgba(36,74,126,0.24)]"
-      : actor === "female"
-        ? "border-rose-300/30 bg-gradient-to-br from-[#8a2c55] via-[#55224f] to-[#160d22] text-rose-100 shadow-[0_16px_32px_rgba(138,44,85,0.22)]"
-        : "border-gold/15 bg-stone-950/65 text-stone-100";
-  const markerClass =
-    actor === "male"
-      ? "text-sky-100/70"
-      : actor === "female"
-        ? "text-rose-100/70"
-        : "text-stone-100/50";
+    variant === "primary"
+      ? "border-gold/30 bg-gradient-to-br from-gold to-[#8f6528] text-stone-950 shadow-[0_16px_32px_rgba(200,162,90,0.2)]"
+      : "border-gold/15 bg-stone-950/65 text-stone-100";
 
   return (
     <button
@@ -1439,11 +1341,7 @@ function ActionButton({
       <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-black/20 backdrop-blur">
         <Icon aria-hidden="true" size={22} />
       </span>
-      {marker ? (
-        <span aria-hidden="true" className={`absolute right-3 top-1/2 -translate-y-1/2 text-[2.6rem] font-semibold leading-none ${markerClass}`}>
-          {marker}
-        </span>
-      ) : null}
+      {showText ? <span className="relative z-10 ml-3 text-lg">{label}</span> : null}
     </button>
   );
 }
