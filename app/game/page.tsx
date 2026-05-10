@@ -45,8 +45,9 @@ type Card = {
 };
 
 type DisplayCard = Card & {
+  displayTitle: string;
   displayText: string;
-  translations: Partial<Record<Lang, TranslationText>>;
+  translations: Partial<Record<AppLang, TranslationText>>;
   comboScore?: number;
 };
 
@@ -71,20 +72,297 @@ const selectedLanguagesStorageKey = "velvetCards.selectedLanguages";
 const legacyLanguageModeStorageKey = "velvetCards.languageMode";
 const customComboItemScore = 5;
 
-const levelNames: Record<Level, string> = {
-  1: "暖身模式",
-  2: "升溫模式",
-  3: "火辣模式"
+const uiCopy: Record<AppLang, {
+  levelNames: Record<Level, string>;
+  restricted: string;
+  restrictedMode: string;
+  home: string;
+  endGame: string;
+  drawCount: string;
+  maleDone: string;
+  femaleDone: string;
+  maleSkip: string;
+  femaleSkip: string;
+  revealing: string;
+  heat: string;
+  timer: string;
+  timerRunning: string;
+  timerAgain: string;
+  timerStart: string;
+  consentNote: string;
+  loadingCard: string;
+  maleComplete: string;
+  femaleComplete: string;
+  maleSkipAction: string;
+  femaleSkipAction: string;
+  lowerLevel: string;
+  chooseLanguages: string;
+  languageTitle: string;
+  primaryLanguage: string;
+  additionalLanguages: string;
+  openComboManager: string;
+  closeComboManager: string;
+  actionLabel: string;
+  bodyPartLabel: string;
+  addAction: string;
+  addBodyPart: string;
+  restoreDefault: string;
+  addItem: string;
+  deleteItem: string;
+  itemCount: string;
+  loadingPage: string;
+}> = {
+  zh: {
+    levelNames: { 1: "暖身模式", 2: "升溫模式", 3: "火辣模式" },
+    restricted: "限制級",
+    restrictedMode: "限制級模式",
+    home: "回首頁",
+    endGame: "結束遊戲",
+    drawCount: "抽卡",
+    maleDone: "男完成",
+    femaleDone: "女完成",
+    maleSkip: "男跳過",
+    femaleSkip: "女跳過",
+    revealing: "揭牌中",
+    heat: "熱度",
+    timer: "計時",
+    timerRunning: "計時中",
+    timerAgain: "再計時一次",
+    timerStart: "開始計時",
+    consentNote: "保持可溝通。任何一方不舒服時，這張牌自動改成擁抱、喝水或休息。",
+    loadingCard: "抽牌中...",
+    maleComplete: "男生完成",
+    femaleComplete: "女生完成",
+    maleSkipAction: "男生跳過",
+    femaleSkipAction: "女生跳過",
+    lowerLevel: "降一級",
+    chooseLanguages: "選擇顯示語言",
+    languageTitle: "語言",
+    primaryLanguage: "主要語言",
+    additionalLanguages: "額外顯示",
+    openComboManager: "管理動作與身體部位",
+    closeComboManager: "收起素材管理",
+    actionLabel: "動作",
+    bodyPartLabel: "身體部位",
+    addAction: "新增動作",
+    addBodyPart: "新增身體部位",
+    restoreDefault: "還原預設",
+    addItem: "新增",
+    deleteItem: "刪除",
+    itemCount: "項",
+    loadingPage: "載入中..."
+  },
+  en: {
+    levelNames: { 1: "Warm-up", 2: "Rising Heat", 3: "Spicy" },
+    restricted: "Restricted",
+    restrictedMode: "Restricted Mode",
+    home: "Home",
+    endGame: "End game",
+    drawCount: "Draws",
+    maleDone: "M done",
+    femaleDone: "F done",
+    maleSkip: "M skip",
+    femaleSkip: "F skip",
+    revealing: "Revealing",
+    heat: "Heat",
+    timer: "Timer",
+    timerRunning: "Timer running",
+    timerAgain: "Restart timer",
+    timerStart: "Start timer",
+    consentNote: "Keep checking in. If either person feels uncomfortable, turn this card into a hug, water break, or rest.",
+    loadingCard: "Drawing...",
+    maleComplete: "Male complete",
+    femaleComplete: "Female complete",
+    maleSkipAction: "Male skip",
+    femaleSkipAction: "Female skip",
+    lowerLevel: "Lower level",
+    chooseLanguages: "Choose display languages",
+    languageTitle: "Languages",
+    primaryLanguage: "Primary",
+    additionalLanguages: "Extra",
+    openComboManager: "Manage actions and body parts",
+    closeComboManager: "Close item manager",
+    actionLabel: "Actions",
+    bodyPartLabel: "Body parts",
+    addAction: "Add action",
+    addBodyPart: "Add body part",
+    restoreDefault: "Restore defaults",
+    addItem: "Add",
+    deleteItem: "Delete",
+    itemCount: "items",
+    loadingPage: "Loading..."
+  },
+  id: {
+    levelNames: { 1: "Pemanasan", 2: "Naik Suhu", 3: "Panas" },
+    restricted: "Terbatas",
+    restrictedMode: "Mode Terbatas",
+    home: "Beranda",
+    endGame: "Akhiri permainan",
+    drawCount: "Kartu",
+    maleDone: "Pria selesai",
+    femaleDone: "Wanita selesai",
+    maleSkip: "Pria lewati",
+    femaleSkip: "Wanita lewati",
+    revealing: "Membuka",
+    heat: "Panas",
+    timer: "Timer",
+    timerRunning: "Timer berjalan",
+    timerAgain: "Mulai ulang timer",
+    timerStart: "Mulai timer",
+    consentNote: "Tetap saling mengecek. Jika ada yang tidak nyaman, ubah kartu ini menjadi pelukan, minum air, atau istirahat.",
+    loadingCard: "Mengambil kartu...",
+    maleComplete: "Pria selesai",
+    femaleComplete: "Wanita selesai",
+    maleSkipAction: "Pria lewati",
+    femaleSkipAction: "Wanita lewati",
+    lowerLevel: "Turun level",
+    chooseLanguages: "Pilih bahasa tampilan",
+    languageTitle: "Bahasa",
+    primaryLanguage: "Utama",
+    additionalLanguages: "Tambahan",
+    openComboManager: "Kelola aksi dan bagian tubuh",
+    closeComboManager: "Tutup pengelola",
+    actionLabel: "Aksi",
+    bodyPartLabel: "Bagian tubuh",
+    addAction: "Tambah aksi",
+    addBodyPart: "Tambah bagian tubuh",
+    restoreDefault: "Pulihkan bawaan",
+    addItem: "Tambah",
+    deleteItem: "Hapus",
+    itemCount: "item",
+    loadingPage: "Memuat..."
+  },
+  vi: {
+    levelNames: { 1: "Khởi động", 2: "Tăng nhiệt", 3: "Nóng bỏng" },
+    restricted: "Giới hạn",
+    restrictedMode: "Chế độ giới hạn",
+    home: "Trang chủ",
+    endGame: "Kết thúc",
+    drawCount: "Lượt rút",
+    maleDone: "Nam xong",
+    femaleDone: "Nữ xong",
+    maleSkip: "Nam bỏ",
+    femaleSkip: "Nữ bỏ",
+    revealing: "Đang mở",
+    heat: "Độ nóng",
+    timer: "Hẹn giờ",
+    timerRunning: "Đang chạy",
+    timerAgain: "Bấm giờ lại",
+    timerStart: "Bắt đầu",
+    consentNote: "Luôn trao đổi với nhau. Nếu ai thấy không thoải mái, hãy đổi lá này thành ôm, uống nước hoặc nghỉ.",
+    loadingCard: "Đang rút...",
+    maleComplete: "Nam hoàn thành",
+    femaleComplete: "Nữ hoàn thành",
+    maleSkipAction: "Nam bỏ qua",
+    femaleSkipAction: "Nữ bỏ qua",
+    lowerLevel: "Giảm cấp",
+    chooseLanguages: "Chọn ngôn ngữ hiển thị",
+    languageTitle: "Ngôn ngữ",
+    primaryLanguage: "Chính",
+    additionalLanguages: "Thêm",
+    openComboManager: "Quản lý hành động và bộ phận",
+    closeComboManager: "Đóng quản lý",
+    actionLabel: "Hành động",
+    bodyPartLabel: "Bộ phận cơ thể",
+    addAction: "Thêm hành động",
+    addBodyPart: "Thêm bộ phận",
+    restoreDefault: "Khôi phục mặc định",
+    addItem: "Thêm",
+    deleteItem: "Xóa",
+    itemCount: "mục",
+    loadingPage: "Đang tải..."
+  },
+  ja: {
+    levelNames: { 1: "ウォームアップ", 2: "ヒートアップ", 3: "スパイシー" },
+    restricted: "制限付き",
+    restrictedMode: "制限付きモード",
+    home: "ホーム",
+    endGame: "終了",
+    drawCount: "枚数",
+    maleDone: "男性完了",
+    femaleDone: "女性完了",
+    maleSkip: "男性スキップ",
+    femaleSkip: "女性スキップ",
+    revealing: "公開中",
+    heat: "熱度",
+    timer: "タイマー",
+    timerRunning: "計測中",
+    timerAgain: "もう一度",
+    timerStart: "開始",
+    consentNote: "こまめに確認しましょう。どちらかが不快なら、このカードはハグ、水分補給、休憩に変えてください。",
+    loadingCard: "カードを引いています...",
+    maleComplete: "男性完了",
+    femaleComplete: "女性完了",
+    maleSkipAction: "男性スキップ",
+    femaleSkipAction: "女性スキップ",
+    lowerLevel: "レベルを下げる",
+    chooseLanguages: "表示言語を選択",
+    languageTitle: "言語",
+    primaryLanguage: "主言語",
+    additionalLanguages: "追加表示",
+    openComboManager: "動作と部位を管理",
+    closeComboManager: "管理を閉じる",
+    actionLabel: "動作",
+    bodyPartLabel: "身体部位",
+    addAction: "動作を追加",
+    addBodyPart: "部位を追加",
+    restoreDefault: "初期値に戻す",
+    addItem: "追加",
+    deleteItem: "削除",
+    itemCount: "件",
+    loadingPage: "読み込み中..."
+  },
+  ko: {
+    levelNames: { 1: "워밍업", 2: "온도 올리기", 3: "핫 모드" },
+    restricted: "제한",
+    restrictedMode: "제한 모드",
+    home: "홈",
+    endGame: "게임 종료",
+    drawCount: "뽑기",
+    maleDone: "남 완료",
+    femaleDone: "여 완료",
+    maleSkip: "남 건너뜀",
+    femaleSkip: "여 건너뜀",
+    revealing: "공개 중",
+    heat: "열기",
+    timer: "타이머",
+    timerRunning: "타이머 실행 중",
+    timerAgain: "다시 시작",
+    timerStart: "시작",
+    consentNote: "계속 서로 확인하세요. 불편하면 이 카드는 포옹, 물 마시기, 휴식으로 바꾸세요.",
+    loadingCard: "카드 뽑는 중...",
+    maleComplete: "남성 완료",
+    femaleComplete: "여성 완료",
+    maleSkipAction: "남성 건너뛰기",
+    femaleSkipAction: "여성 건너뛰기",
+    lowerLevel: "레벨 낮추기",
+    chooseLanguages: "표시 언어 선택",
+    languageTitle: "언어",
+    primaryLanguage: "기본",
+    additionalLanguages: "추가",
+    openComboManager: "동작과 신체 부위 관리",
+    closeComboManager: "관리 닫기",
+    actionLabel: "동작",
+    bodyPartLabel: "신체 부위",
+    addAction: "동작 추가",
+    addBodyPart: "신체 부위 추가",
+    restoreDefault: "기본값 복원",
+    addItem: "추가",
+    deleteItem: "삭제",
+    itemCount: "개",
+    loadingPage: "로딩 중..."
+  }
 };
 
-const languageOptions: { code: Lang; label: string; shortLabel: string }[] = [
+const languageOptions: { code: AppLang; label: string; shortLabel: string }[] = [
+  { code: "zh", label: "繁體中文", shortLabel: "中" },
   { code: "en", label: "English", shortLabel: "EN" },
   { code: "id", label: "Indonesia", shortLabel: "ID" },
   { code: "vi", label: "Tiếng Việt", shortLabel: "VI" },
   { code: "ja", label: "日本語", shortLabel: "日" },
   { code: "ko", label: "한국어", shortLabel: "韓" }
 ];
-const languageCodes = new Set<Lang>(languageOptions.map((language) => language.code));
+const languageCodes = new Set<AppLang>(languageOptions.map((language) => language.code));
 const cardTranslationsByLanguage: Record<Lang, Record<string, TranslationText>> = {
   en: cardTranslationsEnData as Record<string, TranslationText>,
   id: cardTranslationsIdData as Record<string, TranslationText>,
@@ -223,28 +501,62 @@ function readStoredList(key: string, fallback: ComboItem[]): ComboItem[] {
   }
 }
 
-function readSelectedLanguages(): Lang[] {
+function isTranslatedLanguage(language: AppLang): language is Lang {
+  return language !== "zh";
+}
+
+function languageFromLocale(locale?: string | null): AppLang | null {
+  const normalized = locale?.toLowerCase() ?? "";
+  if (!normalized) return null;
+  if (normalized.startsWith("zh")) return "zh";
+
+  const primary = normalized.split(/[-_]/)[0] as AppLang;
+  return languageCodes.has(primary) ? primary : null;
+}
+
+function detectBrowserLanguage(): AppLang {
+  const browserLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
+
+  for (const locale of browserLanguages) {
+    const language = languageFromLocale(locale);
+    if (language) return language;
+  }
+
+  return "en";
+}
+
+function readSelectedLanguages(primaryLanguage: AppLang): AppLang[] {
   try {
     const stored = window.localStorage.getItem(selectedLanguagesStorageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
       return Array.isArray(parsed)
-        ? parsed.filter((language): language is Lang => languageCodes.has(language as Lang)).slice(0, 2)
-        : ["en"];
+        ? parsed
+            .filter((language): language is AppLang => languageCodes.has(language as AppLang))
+            .filter((language) => language !== primaryLanguage)
+            .slice(0, 2)
+        : [];
     }
 
-    return window.localStorage.getItem(legacyLanguageModeStorageKey) === "zh" ? [] : ["en"];
+    if (window.localStorage.getItem(legacyLanguageModeStorageKey) === "zh-en") {
+      return (["zh", "en"] as AppLang[]).filter((language) => language !== primaryLanguage).slice(0, 2);
+    }
+
+    return [];
   } catch {
-    return ["en"];
+    return [];
   }
 }
 
-function translationsFor(cardId: string): Partial<Record<Lang, TranslationText>> {
+function cardTextForLanguage(card: Card, language: AppLang): TranslationText {
+  if (!isTranslatedLanguage(language)) return { title: card.title, text: card.text };
+  return cardTranslationsByLanguage[language][card.id] ?? { title: card.title, text: card.text };
+}
+
+function translationsFor(card: Card): Partial<Record<AppLang, TranslationText>> {
   return Object.fromEntries(
-    languageOptions
-      .map(({ code }) => [code, cardTranslationsByLanguage[code][cardId]] as const)
-      .filter((entry): entry is [Lang, TranslationText] => Boolean(entry[1]))
-  );
+    languageOptions.map(({ code }) => [code, cardTextForLanguage(card, code)] as const)
+  ) as Partial<Record<AppLang, TranslationText>>;
 }
 
 function progressiveScoreCap(drawIndex: number, maxAvailableScore: number): number {
@@ -318,9 +630,18 @@ function comboText(action: ComboItem, bodyPart: ComboItem, duration: ComboItem, 
   return `${actionText}${bodyPartText} ${durationPhrase(language, durationText)}.`;
 }
 
-function buildDisplayCard(card: Card, comboActions = actionDefaults, comboBodyParts = bodyPartDefaults, drawIndex = 0): DisplayCard {
-  const translations = translationsFor(card.id);
-  if (card.type !== "combo") return { ...card, displayText: card.text, translations };
+function buildDisplayCard(
+  card: Card,
+  comboActions = actionDefaults,
+  comboBodyParts = bodyPartDefaults,
+  drawIndex = 0,
+  primaryLanguage: AppLang = "en"
+): DisplayCard {
+  const translations = translationsFor(card);
+  if (card.type !== "combo") {
+    const primary = translations[primaryLanguage] ?? translations.zh ?? { title: card.title, text: card.text };
+    return { ...card, displayTitle: primary.title, displayText: primary.text, translations };
+  }
 
   const { action, bodyPart, duration, score } = pickProgressiveComboParts(
     comboActions,
@@ -328,40 +649,59 @@ function buildDisplayCard(card: Card, comboActions = actionDefaults, comboBodyPa
     durationDefaults,
     drawIndex
   );
+  const comboTranslations = Object.fromEntries(
+    languageOptions.map(({ code }) => {
+      const base = translations[code] ?? translations.zh ?? { title: card.title, text: card.text };
+      return [
+        code,
+        {
+          title: base.title,
+          text: comboText(action, bodyPart, duration, code)
+        }
+      ] as const;
+    })
+  ) as Partial<Record<AppLang, TranslationText>>;
+  const primary = comboTranslations[primaryLanguage] ?? comboTranslations.zh ?? { title: card.title, text: card.text };
 
   return {
     ...card,
-    displayText: comboText(action, bodyPart, duration, "zh"),
-    translations: Object.fromEntries(
-      languageOptions.map(({ code }) => [
-        code,
-        {
-          title: translations[code]?.title ?? "",
-          text: comboText(action, bodyPart, duration, code)
-        }
-      ])
-    ) as Partial<Record<Lang, TranslationText>>,
+    displayTitle: primary.title,
+    displayText: primary.text,
+    translations: comboTranslations,
     comboScore: score
   };
 }
 
-function drawCard(level: Level, previousId?: string): DisplayCard {
+function drawCard(level: Level, primaryLanguage: AppLang, previousId?: string): DisplayCard {
   const pool = cards.filter((card) => card.level === level && card.type !== "combo");
   const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
-  return buildDisplayCard(randomItem(candidates));
+  return buildDisplayCard(randomItem(candidates), actionDefaults, bodyPartDefaults, 0, primaryLanguage);
 }
 
-function drawComboCard(actions: ComboItem[], bodyParts: ComboItem[], drawIndex: number, previousId?: string): DisplayCard {
+function drawComboCard(
+  actions: ComboItem[],
+  bodyParts: ComboItem[],
+  drawIndex: number,
+  primaryLanguage: AppLang,
+  previousId?: string
+): DisplayCard {
   const pool = cards.filter((card) => card.type === "combo");
   const candidates = pool.length > 1 ? pool.filter((card) => card.id !== previousId) : pool;
-  return buildDisplayCard(randomItem(candidates), actions, bodyParts, drawIndex);
+  return buildDisplayCard(randomItem(candidates), actions, bodyParts, drawIndex, primaryLanguage);
 }
 
-function makePreviewDeck(level: Level, isComboOnly: boolean, actions: ComboItem[], bodyParts: ComboItem[], drawIndex = 0) {
+function makePreviewDeck(
+  level: Level,
+  isComboOnly: boolean,
+  actions: ComboItem[],
+  bodyParts: ComboItem[],
+  drawIndex = 0,
+  primaryLanguage: AppLang = "en"
+) {
   const pool = isComboOnly
     ? cards.filter((card) => card.type === "combo")
     : cards.filter((card) => card.level === level && card.type !== "combo");
-  return pool.map((card) => buildDisplayCard(card, actions, bodyParts, drawIndex));
+  return pool.map((card) => buildDisplayCard(card, actions, bodyParts, drawIndex, primaryLanguage));
 }
 
 function normalizeLevel(value: string | null): Level {
@@ -452,7 +792,10 @@ function GameContent() {
   const [currentLevel, setCurrentLevel] = useState<Level>(initialLevel);
   const [card, setCard] = useState<DisplayCard | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const timerSeconds = useMemo(() => (!isDrawing && card ? parseTimerSeconds(card.displayText) : null), [card, isDrawing]);
+  const timerSeconds = useMemo(
+    () => (!isDrawing && card ? parseTimerSeconds(card.translations.zh?.text ?? card.text) : null),
+    [card, isDrawing]
+  );
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerAudioRef = useRef<AudioContext | null>(null);
@@ -470,7 +813,8 @@ function GameContent() {
   const [isLanguagePanelOpen, setIsLanguagePanelOpen] = useState(false);
   const [newAction, setNewAction] = useState("");
   const [newBodyPart, setNewBodyPart] = useState("");
-  const [selectedLanguages, setSelectedLanguages] = useState<Lang[]>(["en"]);
+  const [primaryLanguage, setPrimaryLanguage] = useState<AppLang>("en");
+  const [selectedLanguages, setSelectedLanguages] = useState<AppLang[]>([]);
   const [stats, setStats] = useState<GameStats>({
     level: initialLevel,
     mode: isComboOnly ? "combo" : "level",
@@ -482,6 +826,8 @@ function GameContent() {
     startedAt: new Date().toISOString()
   });
   statsRef.current = stats;
+  const copy = uiCopy[primaryLanguage];
+  const additionalLanguageOptions = languageOptions.filter((language) => language.code !== primaryLanguage);
 
   const clearRevealTimers = useCallback(() => {
     revealTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
@@ -499,9 +845,16 @@ function GameContent() {
     clearRevealTimers();
     const drawIndex = statsRef.current?.totalDraws ?? 0;
     const nextCard = isComboOnly
-      ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, drawIndex, previousId)
-      : drawCard(level, previousId);
-    const previewDeck = makePreviewDeck(level, isComboOnly, comboActionsRef.current, comboBodyPartsRef.current, drawIndex);
+      ? drawComboCard(comboActionsRef.current, comboBodyPartsRef.current, drawIndex, primaryLanguage, previousId)
+      : drawCard(level, primaryLanguage, previousId);
+    const previewDeck = makePreviewDeck(
+      level,
+      isComboOnly,
+      comboActionsRef.current,
+      comboBodyPartsRef.current,
+      drawIndex,
+      primaryLanguage
+    );
 
     setIsDrawing(true);
     setIsTimerRunning(false);
@@ -522,25 +875,28 @@ function GameContent() {
       revealTimeoutsRef.current = [];
     }, 1620);
     revealTimeoutsRef.current.push(finalTimeoutId);
-  }, [clearRevealTimers, isComboOnly, playRevealSound]);
+  }, [clearRevealTimers, isComboOnly, playRevealSound, primaryLanguage]);
 
   useEffect(() => {
+    const detectedLanguage = detectBrowserLanguage();
     const storedActions = readStoredList(comboActionsStorageKey, actionDefaults);
     const storedBodyParts = readStoredList(comboBodyPartsStorageKey, bodyPartDefaults);
     comboActionsRef.current = storedActions;
     comboBodyPartsRef.current = storedBodyParts;
+    setPrimaryLanguage(detectedLanguage);
     setComboActions(storedActions);
     setComboBodyParts(storedBodyParts);
-    setSelectedLanguages(readSelectedLanguages());
+    setSelectedLanguages(readSelectedLanguages(detectedLanguage));
     setSettingsReady(true);
   }, []);
 
   useEffect(() => {
+    if (!settingsReady) return;
     window.localStorage.setItem(selectedLanguagesStorageKey, JSON.stringify(selectedLanguages));
-  }, [selectedLanguages]);
+  }, [selectedLanguages, settingsReady]);
 
   useEffect(() => {
-    if (hasPulledInitialCardRef.current || (isComboOnly && !settingsReady)) return;
+    if (hasPulledInitialCardRef.current || !settingsReady) return;
     hasPulledInitialCardRef.current = true;
     pullCard(initialLevel);
   }, [initialLevel, isComboOnly, pullCard, settingsReady]);
@@ -656,7 +1012,8 @@ function GameContent() {
     pullCard(nextLevel, card?.id);
   };
 
-  const toggleSelectedLanguage = (language: Lang) => {
+  const toggleSelectedLanguage = (language: AppLang) => {
+    if (language === primaryLanguage) return;
     setSelectedLanguages((current) => {
       if (current.includes(language)) return current.filter((value) => value !== language);
       if (current.length >= 2) return current;
@@ -670,30 +1027,28 @@ function GameContent() {
     router.push("/summary");
   };
 
-  const selectedLanguageSummary = selectedLanguages.length
-    ? selectedLanguages
-        .map((language) => languageOptions.find((option) => option.code === language)?.shortLabel)
-        .filter(Boolean)
-        .join("/")
-    : "文";
+  const selectedLanguageSummary = [primaryLanguage, ...selectedLanguages]
+    .map((language) => languageOptions.find((option) => option.code === language)?.shortLabel)
+    .filter(Boolean)
+    .join("/");
 
   return (
     <main className="safe-screen px-4 py-4">
       <section className="mx-auto flex min-h-[calc(100svh-32px)] w-full max-w-md flex-col">
         <header className="flex items-center justify-between gap-3 py-2">
           <Link
-            aria-label="回首頁"
+            aria-label={copy.home}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-gold/15 bg-stone-950/70 text-gold"
             href="/"
           >
             <Home aria-hidden="true" size={20} />
           </Link>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.28em] text-gold/75">{isComboOnly ? "限制級" : `Level ${currentLevel}`}</p>
-            <h1 className="text-lg font-semibold text-stone-50">{isComboOnly ? "限制級模式" : levelNames[currentLevel]}</h1>
+            <p className="text-xs uppercase tracking-[0.28em] text-gold/75">{isComboOnly ? copy.restricted : `Level ${currentLevel}`}</p>
+            <h1 className="text-lg font-semibold text-stone-50">{isComboOnly ? copy.restrictedMode : copy.levelNames[currentLevel]}</h1>
           </div>
           <button
-            aria-label="結束遊戲"
+            aria-label={copy.endGame}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-red-300/20 bg-red-950/30 text-red-100 disabled:opacity-40"
             disabled={isDrawing}
             onClick={endGame}
@@ -704,11 +1059,11 @@ function GameContent() {
         </header>
 
         <div className="grid grid-cols-5 gap-2 py-3 text-center">
-          <Stat label="抽卡" value={stats.totalDraws} />
-          <Stat label="男完成" value={stats.maleCompleted} />
-          <Stat label="女完成" value={stats.femaleCompleted} />
-          <Stat label="男跳過" value={stats.maleSkipped} />
-          <Stat label="女跳過" value={stats.femaleSkipped} />
+          <Stat label={copy.drawCount} value={stats.totalDraws} />
+          <Stat label={copy.maleDone} value={stats.maleCompleted} />
+          <Stat label={copy.femaleDone} value={stats.femaleCompleted} />
+          <Stat label={copy.maleSkip} value={stats.maleSkipped} />
+          <Stat label={copy.femaleSkip} value={stats.femaleSkipped} />
         </div>
 
         <article
@@ -721,11 +1076,11 @@ function GameContent() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-gold">
-                    {isDrawing ? "揭牌中" : card.type === "combo" ? "限制級" : card.type}
+                    {isDrawing ? copy.revealing : card.type === "combo" ? copy.restricted : card.type}
                   </span>
                   {isComboOnly && typeof card.comboScore === "number" ? (
                     <span className="rounded-full border border-purple-200/15 bg-purple-950/30 px-3 py-1 text-xs font-medium text-purple-100">
-                      熱度 {card.comboScore}
+                      {copy.heat} {card.comboScore}
                     </span>
                   ) : null}
                   {card.tags.slice(0, 2).map((tag) => (
@@ -736,7 +1091,7 @@ function GameContent() {
                 </div>
 
                 <h2 className={`mt-8 text-4xl font-semibold leading-tight text-stone-50 ${isDrawing ? "animate-pulse" : ""}`}>
-                  {card.title}
+                  {card.displayTitle}
                 </h2>
                 {selectedLanguages.map((language) => {
                   const translation = card.translations[language];
@@ -768,16 +1123,16 @@ function GameContent() {
                     <div className="flex items-center gap-3">
                       <Clock3 aria-hidden="true" className="text-gold" size={22} />
                       <div>
-                        <p className="text-xs text-stone-400">計時</p>
+                        <p className="text-xs text-stone-400">{copy.timer}</p>
                         <p className="text-3xl font-semibold text-stone-50">{formatTime(remainingSeconds ?? timerSeconds)}</p>
                       </div>
                     </div>
                     <button
-                      aria-label={isTimerRunning ? "計時中" : remainingSeconds === 0 ? "再計時一次" : "開始計時"}
+                      aria-label={isTimerRunning ? copy.timerRunning : remainingSeconds === 0 ? copy.timerAgain : copy.timerStart}
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold text-stone-950 active:scale-[0.98] disabled:opacity-60"
                       disabled={isTimerRunning}
                       onClick={startTimer}
-                      title={isTimerRunning ? "計時中" : remainingSeconds === 0 ? "再計時一次" : "開始計時"}
+                      title={isTimerRunning ? copy.timerRunning : remainingSeconds === 0 ? copy.timerAgain : copy.timerStart}
                       type="button"
                     >
                       <Play aria-hidden="true" size={16} />
@@ -786,33 +1141,33 @@ function GameContent() {
                 ) : null}
               </div>
               <p className="mt-8 border-t border-gold/15 pt-5 text-sm leading-6 text-stone-300">
-                保持可溝通。任何一方不舒服時，這張牌自動改成擁抱、喝水或休息。
+                {copy.consentNote}
               </p>
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-stone-300">抽牌中...</div>
+            <div className="flex flex-1 items-center justify-center text-stone-300">{copy.loadingCard}</div>
           )}
         </article>
 
         <div className="grid grid-cols-2 gap-3 pb-3">
-          <ActionButton actor="male" icon={Check} label="男生完成" marker="♂" onClick={() => complete("male")} disabled={isDrawing} />
-          <ActionButton actor="female" icon={Check} label="女生完成" marker="♀" onClick={() => complete("female")} disabled={isDrawing} />
-          <ActionButton actor="male" icon={Shuffle} label="男生跳過" marker="♂" onClick={() => skip("male")} disabled={isDrawing} />
-          <ActionButton actor="female" icon={Shuffle} label="女生跳過" marker="♀" onClick={() => skip("female")} disabled={isDrawing} />
+          <ActionButton actor="male" icon={Check} label={copy.maleComplete} marker="♂" onClick={() => complete("male")} disabled={isDrawing} />
+          <ActionButton actor="female" icon={Check} label={copy.femaleComplete} marker="♀" onClick={() => complete("female")} disabled={isDrawing} />
+          <ActionButton actor="male" icon={Shuffle} label={copy.maleSkipAction} marker="♂" onClick={() => skip("male")} disabled={isDrawing} />
+          <ActionButton actor="female" icon={Shuffle} label={copy.femaleSkipAction} marker="♀" onClick={() => skip("female")} disabled={isDrawing} />
           <ActionButton
             icon={isComboOnly ? Wand2 : ArrowDown}
-            label={isComboOnly ? "限制級" : "降一級"}
+            label={isComboOnly ? copy.restricted : copy.lowerLevel}
             onClick={lowerLevel}
             disabled={isDrawing || isComboOnly || currentLevel === 1}
           />
         </div>
 
         <button
-          aria-label="結束遊戲"
+          aria-label={copy.endGame}
           className="mb-2 flex min-h-12 items-center justify-center rounded-2xl border border-red-300/25 bg-red-950/35 px-5 text-base font-semibold text-red-50 active:scale-[0.99] disabled:opacity-40"
           disabled={isDrawing}
           onClick={endGame}
-          title="結束遊戲"
+          title={copy.endGame}
           type="button"
         >
           <Square aria-hidden="true" size={18} />
@@ -820,14 +1175,14 @@ function GameContent() {
 
         <div className="flex items-center justify-center gap-2 pb-3 pt-1">
           <button
-            aria-label="選擇顯示語言"
+            aria-label={copy.chooseLanguages}
             className={`flex h-10 min-w-10 items-center justify-center rounded-full border px-3 active:scale-[0.98] ${
               isLanguagePanelOpen
                 ? "border-purple-200/25 bg-purple-950/35 text-purple-100"
                 : "border-purple-200/10 bg-purple-950/15 text-purple-100/70"
             }`}
             onClick={() => setIsLanguagePanelOpen((current) => !current)}
-            title="選擇顯示語言"
+            title={copy.chooseLanguages}
             type="button"
           >
             <span aria-hidden="true" className="text-sm font-semibold leading-none">{selectedLanguageSummary}</span>
@@ -835,12 +1190,12 @@ function GameContent() {
 
           {isComboOnly ? (
             <button
-              aria-label={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
+              aria-label={isManagingCombo ? copy.closeComboManager : copy.openComboManager}
               className={`flex h-10 w-10 items-center justify-center rounded-full border active:scale-[0.98] ${
                 isManagingCombo ? "border-gold/30 bg-gold/15 text-gold" : "border-gold/10 bg-stone-950/35 text-gold/55"
               }`}
               onClick={() => setIsManagingCombo((current) => !current)}
-              title={isManagingCombo ? "收起素材管理" : "管理動作與身體部位"}
+              title={isManagingCombo ? copy.closeComboManager : copy.openComboManager}
               type="button"
             >
               {isManagingCombo ? <X aria-hidden="true" size={15} /> : <Settings2 aria-hidden="true" size={15} />}
@@ -851,16 +1206,23 @@ function GameContent() {
         {isLanguagePanelOpen ? (
           <section className="mb-3 rounded-2xl border border-purple-200/10 bg-stone-950/45 p-3">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-stone-200">語言</p>
-              <p className="text-xs text-stone-500">{selectedLanguages.length}/2</p>
+              <div>
+                <p className="text-sm font-semibold text-stone-200">{copy.languageTitle}</p>
+                <p className="mt-1 text-xs text-stone-500">
+                  {copy.primaryLanguage}: {languageOptions.find((language) => language.code === primaryLanguage)?.label}
+                </p>
+              </div>
+              <p className="text-xs text-stone-500">
+                {copy.additionalLanguages} {selectedLanguages.length}/2
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {languageOptions.map((language) => {
+              {additionalLanguageOptions.map((language) => {
                 const isSelected = selectedLanguages.includes(language.code);
                 const isDisabled = !isSelected && selectedLanguages.length >= 2;
                 return (
                   <button
-                    aria-label={`切換${language.label}`}
+                    aria-label={`${copy.chooseLanguages}: ${language.label}`}
                     aria-pressed={isSelected}
                     className={`flex min-h-10 items-center justify-between rounded-xl border px-3 text-sm font-semibold active:scale-[0.98] disabled:opacity-35 ${
                       isSelected ? "border-purple-200/25 bg-purple-950/45 text-purple-50" : "border-stone-100/10 bg-black/20 text-stone-400"
@@ -882,9 +1244,13 @@ function GameContent() {
         {isComboOnly && isManagingCombo ? (
           <section className="mb-3 space-y-3 rounded-2xl border border-gold/12 bg-stone-950/50 p-4">
             <ComboListEditor
+              addLabel={copy.addItem}
+              deleteLabel={copy.deleteItem}
+              displayLanguage={primaryLanguage}
               inputValue={newAction}
               items={comboActions}
-              label="動作"
+              itemCountLabel={copy.itemCount}
+              label={copy.actionLabel}
               onAdd={() => addCustomItem("action")}
               onInputChange={setNewAction}
               onRemove={(item) => setComboActions((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
@@ -892,12 +1258,17 @@ function GameContent() {
                 setComboActions(actionDefaults);
                 setNewAction("");
               }}
-              placeholder="新增動作"
+              placeholder={copy.addAction}
+              restoreLabel={copy.restoreDefault}
             />
             <ComboListEditor
+              addLabel={copy.addItem}
+              deleteLabel={copy.deleteItem}
+              displayLanguage={primaryLanguage}
               inputValue={newBodyPart}
               items={comboBodyParts}
-              label="身體部位"
+              itemCountLabel={copy.itemCount}
+              label={copy.bodyPartLabel}
               onAdd={() => addCustomItem("bodyPart")}
               onInputChange={setNewBodyPart}
               onRemove={(item) => setComboBodyParts((current) => current.filter((value) => comboLabelKey(value) !== comboLabelKey(item)))}
@@ -905,7 +1276,8 @@ function GameContent() {
                 setComboBodyParts(bodyPartDefaults);
                 setNewBodyPart("");
               }}
-              placeholder="新增身體部位"
+              placeholder={copy.addBodyPart}
+              restoreLabel={copy.restoreDefault}
             />
           </section>
         ) : null}
@@ -914,7 +1286,7 @@ function GameContent() {
   );
 }
 
-function LanguageMark({ language, tone = "muted" }: { language: Lang; tone?: "gold" | "muted" }) {
+function LanguageMark({ language, tone = "muted" }: { language: AppLang; tone?: "gold" | "muted" }) {
   return (
     <span className={`mr-2 text-xs uppercase tracking-[0.16em] ${tone === "gold" ? "text-gold/55" : "text-stone-500"}`}>
       {languageOptions.find((option) => option.code === language)?.shortLabel}
@@ -922,37 +1294,51 @@ function LanguageMark({ language, tone = "muted" }: { language: Lang; tone?: "go
   );
 }
 
+function comboDisplayLabel(item: ComboItem, language: AppLang): string {
+  return localizedText(item.label, language) || comboLabelKey(item);
+}
+
 function ComboListEditor({
+  addLabel,
+  deleteLabel,
+  displayLanguage,
   inputValue,
   items,
+  itemCountLabel,
   label,
   onAdd,
   onInputChange,
   onRemove,
   onReset,
-  placeholder
+  placeholder,
+  restoreLabel
 }: {
+  addLabel: string;
+  deleteLabel: string;
+  displayLanguage: AppLang;
   inputValue: string;
   items: ComboItem[];
+  itemCountLabel: string;
   label: string;
   onAdd: () => void;
   onInputChange: (value: string) => void;
   onRemove: (value: ComboItem) => void;
   onReset: () => void;
   placeholder: string;
+  restoreLabel: string;
 }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-stone-100">
           {label}
-          <span className="ml-2 text-xs font-normal text-stone-400">{items.length} 項</span>
+          <span className="ml-2 text-xs font-normal text-stone-400">{items.length} {itemCountLabel}</span>
         </p>
         <button
-          aria-label={`還原${label}預設`}
+          aria-label={`${restoreLabel} ${label}`}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/15 text-gold/85 active:scale-[0.98]"
           onClick={onReset}
-          title={`還原${label}預設`}
+          title={`${restoreLabel} ${label}`}
           type="button"
         >
           <Shuffle aria-hidden="true" size={15} />
@@ -969,7 +1355,7 @@ function ComboListEditor({
           value={inputValue}
         />
         <button
-          aria-label={`新增${label}`}
+          aria-label={`${addLabel} ${label}`}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold text-stone-950 active:scale-[0.98]"
           onClick={onAdd}
           type="button"
@@ -978,24 +1364,27 @@ function ComboListEditor({
         </button>
       </div>
       <div className="mt-3 flex max-h-32 flex-wrap gap-2 overflow-auto pr-1">
-        {items.map((item) => (
-          <span
-            className="inline-flex max-w-full items-center gap-2 rounded-full border border-gold/15 bg-black/25 px-3 py-2 text-sm text-stone-200"
-            key={comboLabelKey(item)}
-          >
-            <span className="truncate">{comboLabelKey(item)}</span>
-            <span className="rounded-full bg-gold/10 px-2 py-0.5 text-xs font-semibold text-gold">{item.score}</span>
-            <button
-              aria-label={`刪除${comboLabelKey(item)}`}
-              className="text-stone-400 active:text-red-200 disabled:opacity-30"
-              disabled={items.length <= 1}
-              onClick={() => onRemove(item)}
-              type="button"
+        {items.map((item) => {
+          const visibleLabel = comboDisplayLabel(item, displayLanguage);
+          return (
+            <span
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-gold/15 bg-black/25 px-3 py-2 text-sm text-stone-200"
+              key={comboLabelKey(item)}
             >
-              <Trash2 aria-hidden="true" size={14} />
-            </button>
-          </span>
-        ))}
+              <span className="truncate">{visibleLabel}</span>
+              <span className="rounded-full bg-gold/10 px-2 py-0.5 text-xs font-semibold text-gold">{item.score}</span>
+              <button
+                aria-label={`${deleteLabel} ${visibleLabel}`}
+                className="text-stone-400 active:text-red-200 disabled:opacity-30"
+                disabled={items.length <= 1}
+                onClick={() => onRemove(item)}
+                type="button"
+              >
+                <Trash2 aria-hidden="true" size={14} />
+              </button>
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -1061,7 +1450,7 @@ function ActionButton({
 
 export default function GamePage() {
   return (
-    <Suspense fallback={<main className="safe-screen px-5 py-6 text-stone-100">載入中...</main>}>
+    <Suspense fallback={<main className="safe-screen px-5 py-6 text-stone-100">Loading...</main>}>
       <GameContent />
     </Suspense>
   );
